@@ -7,29 +7,130 @@ from datetime import datetime
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# --- 1. Page Configuration (Generic Title to avoid SEO) ---
-st.set_page_config(page_title="Data View v2.0", layout="wide")
+# --- 1. 页面配置 ---
+st.set_page_config(page_title="Data Dashboard", layout="wide")
 
-# --- 2. CSS Styling (Web 1.0 Serif - Clean & Boring) ---
+# --- 2. 样式设置  ---
 st.markdown("""
 <style>
-    /* Global Settings: Times New Roman */
+    /* ============================================================ */
+    /* 1. 全局字体与基础 */
+    /* ============================================================ */
     .stApp {
         background-color: #ffffff;
         font-family: 'Times New Roman', Times, serif;
         color: #000000;
     }
-
-    /* Header Styles - Generic Academic Look */
-    h1, h2, h3 {
-        color: #333333 !important;
+    
+    h1, h2, h3, label {
         font-family: 'Times New Roman', Times, serif !important;
-        font-weight: bold;
-        padding-bottom: 5px;
-        border-bottom: 1px solid #ccc;
+        color: #000000 !important;
+    }
+    
+    p, div, span, li {
+        font-family: 'Times New Roman', Times, serif !important;
+    }
+    
+    /* 隐藏 Plotly 工具栏 */
+    .modebar { display: none !important; }
+
+    /* ============================================================ */
+    /* 2. 容器样式 
+    /* ============================================================ */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid #000000 !important;
+        border-radius: 0px !important;
+        background-color: #ffffff;
+        /* 保留默认 padding，用下方 header 的负边距来贴边 */
     }
 
-    /* Metric Dashboard Styles */
+    /* ============================================================ */
+    /* 3. 标题栏样式
+    /* ============================================================ */
+    .retro-header {
+        background-color: #e0e0e0;
+        color: #000000 !important;
+        font-weight: bold;
+        text-transform: uppercase;
+        
+        /* [核心魔法]：抵消 Streamlit 容器默认的内边距，让标题贴边 */
+        margin-top: -16px !important;
+        margin-left: -16px !important;
+        margin-right: -16px !important;
+        margin-bottom: 15px !important;
+        
+        /* 重新计算宽度，确保盖住左右 */
+        width: calc(100% + 32px) !important;
+        padding: 8px 0px;
+        border-bottom: 1px solid #000000;
+        font-size: 1rem;
+        letter-spacing: 0.05em;
+        text-align: center;
+        line-height: 1.2;
+    }
+    
+    .retro-content-pad {
+        padding: 0px 10px;
+    }
+
+    /* ============================================================ */
+    /* 4. 输入控件改造 (1px 细黑边) */
+    /* ============================================================ */
+    div[data-baseweb="select"] > div {
+        border: 1px solid #000000 !important;
+        border-radius: 0px !important;
+        background-color: #ffffff !important;
+        box-shadow: none !important;
+        min-height: 38px;
+        cursor: pointer !important;
+    }
+    div[data-baseweb="select"] input {
+        caret-color: transparent !important;
+        cursor: pointer !important;
+    }
+    div[data-baseweb="select"] svg {
+        fill: #000000 !important;
+    }
+    div[data-baseweb="popover"] > div, div[data-baseweb="menu"] {
+        border: 1px solid #000000 !important;
+        border-radius: 0px !important;
+    }
+
+    /* ============================================================ */
+    /* 5. 时间滑块改造 */
+    /* ============================================================ */
+    /* 隐藏滑块自带数值 */
+    div[data-testid="stSliderTickBar"],
+    div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
+        display: none !important;
+    }
+
+    .stSlider > div > div > div > div {
+        height: 6px !important;
+        background-color: #c0c0c0 !important;
+        border: 1px solid #808080 !important;
+        border-radius: 0px !important;
+    }
+    
+    /* 方形手柄 */
+    [data-testid="stSliderThumb"] {
+        height: 18px !important;
+        width: 18px !important;
+        border-radius: 0px !important;
+        background-color: #000000 !important;
+        border: 1px solid #ffffff !important;
+        top: -6px !important;
+    }
+    [data-testid="stSliderThumb"]:focus { 
+        box-shadow: none !important;
+    }
+    .stSlider > div > div > div > div > div {
+         background-color: #666666 !important;
+    }
+
+    /* ============================================================ */
+    /* 6. 指标卡片 (1px 细黑框) */
+    /* ============================================================ */
     .metric-container {
         display: flex;
         justify-content: space-between;
@@ -37,261 +138,89 @@ st.markdown("""
         padding: 15px;
         border: 1px solid #000000;
         margin-bottom: 20px;
-        margin-top: 10px;
     }
     .metric-item {
         text-align: center;
         width: 33%;
         border-right: 1px solid #ccc;
     }
-    .metric-item:last-child {
-        border-right: none;
-    }
-    .metric-label {
-        font-size: 1.0em;
-        color: #444;
-        text-transform: uppercase;
-        font-family: 'Times New Roman', Times, serif;
-        margin-bottom: 5px;
-        font-weight: normal;
-    }
-    .metric-value {
+    .metric-item:last-child { border-right: none; }
+    .metric-value { 
         font-size: 1.6em;
         font-weight: bold;
-        color: #000000;
-        font-family: 'Times New Roman', Times, serif;
     }
 
-    /* Legend Box Style */
-    .legend-box {
-        font-size: 1.0em;
-        color: #000;
-        background-color: #ffffff;
-        padding: 10px;
-        border: 1px solid #000;
-        font-family: 'Times New Roman', Times, serif;
-    }
-    .legend-item {
-        margin-bottom: 8px;
-    }
-    .color-box {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        margin-right: 8px;
-        border: 1px solid #000;
-    }
-
-    /* Chart Container */
-    .stPlotlyChart {
-        background-color: white;
-        border: 1px solid #000000;
-        padding: 5px;
-    }
+    /* ============================================================ */
+    /* 7. 按钮与杂项 */
+    /* ============================================================ */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     
-    /* Button Override */
     .stButton>button {
-        font-family: 'Times New Roman', Times, serif;
-        font-weight: bold;
         border-radius: 0px !important;
         border: 1px solid #000 !important;
         background-color: #e0e0e0 !important;
         color: #000 !important;
+        font-weight: bold !important;
+        box-shadow: 1px 1px 0px #888 !important;
+        min-height: 38px !important; 
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
     }
-
-    /* Input & Date Picker Override */
-    input, input[type="date"], input[type="text"], .stDateInput>div>div>input {
-        font-family: 'Times New Roman', Times, serif !important;
-        border-radius: 0px !important;
-        border: 1px solid #000 !important;
-        background-color: #ffffff !important;
-        color: #000 !important;
-    }
-
-    /* Select Box Override - Comprehensive */
-    .stSelectbox, .stSelectbox > div, .stSelectbox > div > div, .stSelectbox * {
-        border-radius: 0px !important;
+    .stButton>button:active {
+        box-shadow: none !important;
+        transform: translate(1px, 1px);
     }
     
-    .stSelectbox [role="listbox"], .stSelectbox [role="combobox"], select {
-        font-family: 'Times New Roman', Times, serif !important;
-        border-radius: 0px !important;
-        border: 1px solid #000 !important;
-        background-color: #ffffff !important;
-        color: #000 !important;
+    div[data-testid="stWidgetLabel"] p {
+        font-size: 0.9rem !important;
+        font-weight: bold !important;
+        color: #333 !important;
     }
-    
-    /* Extra selectbox styling */
-    .stSelectbox > div > button {
-        border-radius: 0px !important;
-        border: 1px solid #000 !important;
-        font-family: 'Times New Roman', Times, serif !important;
-    }
-
-    /* Date Input Container */
-    .stDateInput > div {
-        border-radius: 0px !important;
-    }
-    
-    .stDateInput > div > div > input {
-        border-radius: 0px !important;
-        border: 1px solid #000 !important;
-        font-family: 'Times New Roman', Times, serif !important;
-        background-color: #ffffff !important;
-    }
-
-    /* Time Slicer Section - Internal */
-    .time-slicer-section {
-        margin-top: 0;
-    }
-
-    /* Slider (range) styling - 90s style, no rounded corners */
-    input[type="range"], .stSlider * {
-        border-radius: 0px !important;
-        border: 1px solid #000 !important;
-        background-color: #ffffff !important;
-        font-family: 'Times New Roman', Times, serif !important;
-    }
-    .stSlider > div > div {
-        border-radius: 0px !important;
-        border: none !important;
-        padding: 4px !important;
-        background-color: transparent !important;
-    }
-    /* Full width slider container */
-    .full-width-slider {
-        width: 100%;
-        padding: 6px 8px;
-        border: 1px solid #666;
-        background-color: #ffffff;
-        box-sizing: border-box;
-        margin-bottom: 8px;
-    }
-    /* Ensure the Streamlit slider uses full width */
-    .stSlider {
-        width: 100% !important;
-    }
-    .stSlider > div {
-        width: 100% !important;
-    }
-    /* Slimmer slider track (retro look) */
-    .stSlider input[type="range"] {
-        height: 8px !important;
-        background: #e9e9e9 !important;
-    }
-    .stSlider .css-1x8cf1d {
-        border-radius: 0px !important;
-    }
-    .slider-date-box {
-        border: 1px solid #666;
-        padding: 6px 10px;
-        font-family: 'Times New Roman', Times, serif;
-        font-size: 14px;
-        color: #333333;
-        background-color: #ffffff;
-        text-align: center;
-    }
-
-    .fullwidth-title {
-        font-family: 'Times New Roman', Times, serif;
-        font-weight: bold;
-        font-size: 0.95em;
-        color: #000;
-        text-transform: uppercase;
-        margin-top: 8px;
-        margin-bottom: 6px;
-    }
-
-    .time-slicer-title {
-        font-family: 'Times New Roman', Times, serif;
-        font-weight: bold;
-        font-size: 0.95em;
-        color: #000;
-        text-transform: uppercase;
-        margin-bottom: 10px;
-        border-bottom: 1px solid #ccc;
-        padding-bottom: 8px;
-    }
-    
-    /* Config Box Section */
-    .config-box {
-        background-color: #ffffff;
-        border: 1px solid #000;
-        padding: 0px;
-        margin-bottom: 15px;
-    }
-    
-    .config-title {
-        font-family: 'Times New Roman', Times, serif;
-        font-weight: bold;
-        font-size: 1.0em;
-        color: #000;
-        text-transform: uppercase;
-        background-color: #e0e0e0;
-        padding: 8px 12px;
-        margin: 0;
-        border-bottom: 1px solid #000;
-    }
-    
-    .config-content {
-        padding: 12px;
-    }
-    
-    .config-section {
-        margin-bottom: 10px;
-    }
-    
-    .config-section-divider {
-        border-top: 1px solid #ccc;
-        margin: 12px 0 0 0;
-        padding-top: 0;
-    }
-    
-    /* Guide Box Section */
-    .guide-box {
-        background-color: #ffffff;
-        border: 1px solid #000;
-        padding: 0px;
-        margin-bottom: 15px;
-    }
-    
-    .guide-title {
-        font-family: 'Times New Roman', Times, serif;
-        font-weight: bold;
-        font-size: 1.0em;
-        color: #000;
-        text-transform: uppercase;
-        background-color: #e0e0e0;
-        padding: 8px 12px;
-        margin: 0;
-        border-bottom: 1px solid #000;
-    }
-    
-    .guide-content {
-        padding: 10px 12px 12px 12px;
-    }
-
-    /* Hide Streamlit Menu */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. Core Logic (Power Law & Dynamic Fit) ---
+# --- 3. 数据逻辑 (完全修复版) ---
 @st.cache_data(ttl=3600)
 def get_data_and_calc(ticker):
     try:
-        # Fetch Data (Real Ticker)
+        # 下载数据
         df = yf.download(ticker, period="max", interval="1d", progress=False)
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.droplevel(1)
-        df.index = df.index.tz_localize(None)
         
+        if df.empty:
+            return pd.DataFrame(), "Error: No data returned from Yahoo Finance."
+
+        # 清洗 MultiIndex
+        if isinstance(df.columns, pd.MultiIndex):
+            if'Close' in df.columns.get_level_values(0):
+                 df = df.xs('Close', axis=1, level=0, drop_level=True)
+            else:
+                 df.columns = df.columns.droplevel(1)
+        
+        # 确保只有 Close 列
+        if'Close' not in df.columns:
+            if len(df.columns) == 1:
+                df.columns = ['Close']
+            else:
+                # 尝试模糊匹配 Close
+                close_cols = [c for c in df.columns if'Close' in str(c)]
+                if close_cols:
+                    df = df[[close_cols[0]]].copy()
+                    df.columns = ['Close']
+        
+        # 最终检查 (这里是之前报错的地方，现在已修复)
+        if'Close' not in df.columns:
+             return pd.DataFrame(), f"Error: Could not find Close price. Columns: {df.columns.tolist()}"
+             
         df = df[['Close']].copy().sort_index()
+        
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
+        
         df = df[~df.index.duplicated(keep='last')]
+        df = df.dropna()
         df = df[df['Close'] > 0]
         
-        # Basic Metrics
         df['Log_Price'] = np.log(df['Close'])
         df['GeoMean'] = np.exp(df['Log_Price'].rolling(window=200).mean())
         
@@ -299,273 +228,212 @@ def get_data_and_calc(ticker):
         df['Days'] = (df.index - genesis_date).days
         df = df[df['Days'] > 0]
         
-        # Fitting Logic
         if ticker == "BTC-USD":
-            # Bitcoin Power Law
             slope = 5.84
             intercept = -17.01
             log_days = np.log10(df['Days'])
             df['Predicted'] = 10 ** (slope * log_days + intercept)
             note = "Method: Power Law (Fixed)"
         else:
-            # Dynamic Fit
             valid_data = df.dropna()
-            x = np.log10(valid_data['Days'].values)
-            y = np.log10(valid_data['Close'].values)
-            slope, intercept, _, _, _ = linregress(x, y)
-            df['Predicted'] = 10 ** (intercept + slope * np.log10(df['Days']))
-            note = f"Method: Dynamic Reg (Beta {slope:.4f})"
+            if len(valid_data) > 0:
+                x = np.log10(valid_data['Days'].values)
+                y = np.log10(valid_data['Close'].values)
+                slope, intercept, _, _, _ = linregress(x, y)
+                df['Predicted'] = 10 ** (intercept + slope * np.log10(df['Days']))
+                note = f"Method: Dynamic Reg (Beta {slope:.4f})"
+            else:
+                df['Predicted'] = np.nan
+                note = "Insufficient Data"
 
-        # Calculate Index (Hidden Name: Deviation Index)
         df['AHR999'] = (df['Close'] / df['GeoMean']) * (df['Close'] / df['Predicted'])
         return df, note
     except Exception as e:
-        return pd.DataFrame(), str(e)
+        return pd.DataFrame(), f"System Error: {str(e)}"
 
-# --- 4. Top Layout ---
+# --- 4. 页面布局 ---
 
 st.title("Statistical Deviation Monitor")
+st.markdown("---")
 
-# Control & Legend
-with st.container():
-    col_controls, col_legend = st.columns([1, 2])
-    
-    with col_controls:
-        st.markdown('<div class="config-box"><div class="config-title">CONFIGURATION</div><div class="config-content">', unsafe_allow_html=True)
+# 4.1 顶部配置
+col_l, col_r = st.columns([1, 2], gap="large")
+
+# 左侧：配置 (使用 border=True + 负边距 CSS)
+with col_l:
+    with st.container(border=True):
+        st.markdown('<div class="retro-header">CONFIGURATION</div>', unsafe_allow_html=True)
         
-        # Target Asset
-        st.markdown('<div class="config-section">', unsafe_allow_html=True)
-        ticker = st.selectbox("Target Asset", ["BTC-USD", "ETH-USD"])
-        st.markdown('</div>', unsafe_allow_html=True)
+        ticker = st.selectbox(
+            "Target Asset", 
+            options=["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD"],
+            index=0
+        )
         
-        # Time Range Filter (Timeline Slicer) - title moved below the slider
-        st.markdown('<div class="config-section-divider">', unsafe_allow_html=True)
+        st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
         
-        if st.button("Reload Dataset"):
+        if st.button("RELOAD DATASET", use_container_width=True):
             st.cache_data.clear()
-        
-        st.markdown('</div></div>', unsafe_allow_html=True)
-            
-    with col_legend:
-        st.markdown('<div class="guide-box"><div class="guide-title">REFERENCE GUIDE</div><div class="guide-content">', unsafe_allow_html=True)
+            st.rerun()
+
+# 右侧：指南
+with col_r:
+    with st.container(border=True):
+        st.markdown('<div class="retro-header">REFERENCE GUIDE</div>', unsafe_allow_html=True)
         st.markdown("""
-        <div class="legend-box">
-            <div class="legend-item">
-                <span class="color-box" style="background-color: #28a745;"></span>
-                <b>L-Line (0.45)</b>: Lower statistical bound. Historical buy zone.
+        <div class="retro-content-pad" style="font-size: 0.95rem;">
+            <div style="margin-bottom: 10px; display: flex; align-items: center;">
+                <span style="display:inline-block; width:12px; height:12px; background-color:#28a745; border:1px solid black; margin-right:10px;"></span>
+                <span><b>L-Line (0.45):</b> Lower statistical bound. Historical buy zone.</span>
             </div>
-            <div class="legend-item">
-                <span class="color-box" style="background-color: #007bff;"></span>
-                <b>M-Line (1.20)</b>: Mean accumulation threshold.
+            <div style="margin-bottom: 10px; display: flex; align-items: center;">
+                <span style="display:inline-block; width:12px; height:12px; background-color:#007bff; border:1px solid black; margin-right:10px;"></span>
+                <span><b>M-Line (1.20):</b> Mean accumulation threshold.</span>
             </div>
-            <div class="legend-item">
-                <span class="color-box" style="background-color: #dc3545;"></span>
-                <b>H-Line (4.00)</b>: Upper statistical bound. Variance warning.
+            <div style="margin-bottom: 0px; display: flex; align-items: center;">
+                <span style="display:inline-block; width:12px; height:12px; background-color:#dc3545; border:1px solid black; margin-right:10px;"></span>
+                <span><b>H-Line (4.00):</b> Upper statistical bound. Variance warning.</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown('</div></div>', unsafe_allow_html=True)
 
-st.markdown("---")
-
-# Full-width date-range slider (90s style)
+# 4.2 时间选择器
 min_date = datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
 default_start = datetime(2020, 1, 1).date()
 default_end = max_date
 
-# Layout: left date box, wide slider, right date box
-col_l, col_m, col_r = st.columns([1, 10, 1])
-with col_m:
+slider_key = f"slider_{ticker}"
+if slider_key not in st.session_state:
+    st.session_state[slider_key] = (default_start, default_end)
+
+with st.container(border=True):
+    st.markdown('<div class="retro-header">TIME RANGE SLICER</div>', unsafe_allow_html=True)
+    
+    # 左右日期显示
+    c_start, c_end = st.columns([1, 1])
+    current_val = st.session_state[slider_key]
+    start_str = current_val[0].strftime("%Y/%m/%d")
+    end_str = current_val[1].strftime("%Y/%m/%d")
+    
+    with c_start:
+        st.markdown(f"<div style='padding-left:0px;'><b>{start_str}</b></div>", unsafe_allow_html=True)
+    with c_end:
+        st.markdown(f"<div style='text-align: right; padding-right:0px;'><b>{end_str}</b></div>", unsafe_allow_html=True)
+    
     start_date, end_date = st.slider(
-        "",
+        "Time Range",
         min_value=min_date,
         max_value=max_date,
-        value=(default_start, default_end),
+        value=st.session_state[slider_key],
         format="YYYY/MM/DD",
-        help="Drag the handles to set start and end dates",
-        key="date_range_slider"
+        label_visibility="collapsed",
+        key=slider_key
     )
-with col_l:
-    st.markdown(f"<div class=\"slider-date-box\">{start_date}</div>", unsafe_allow_html=True)
-with col_r:
-    st.markdown(f"<div class=\"slider-date-box\">{end_date}</div>", unsafe_allow_html=True)
 
-# Slicer Title (placed below slider for better balance)
-st.markdown('<div class="fullwidth-title">TIME RANGE SLICER</div>', unsafe_allow_html=True)
+# --- 5. 核心分析展示 ---
 
-# --- 5. Main Analysis ---
-
-with st.spinner("Calculating metrics..."):
+with st.spinner("Processing data..."):
     df, note = get_data_and_calc(ticker)
     
-    # Keep full data for validation and calculations
     df_full = df.copy()
     
-    # Apply Date Range Filter for display only (use timestamps from slider)
-    df_display = df.copy()
-    if not df_display.empty:
-        df_display = df_display[(df_display.index >= pd.to_datetime(start_date)) & (df_display.index <= pd.to_datetime(end_date))]
-    
-    if not df_full.empty and len(df_full) > 200:
-        last = df_full.iloc[-1]
-        ahr = last['AHR999']
-        price = last['Close']
+    if not df_full.empty:
+        mask = (df_full.index >= pd.to_datetime(start_date)) & (df_full.index <= pd.to_datetime(end_date))
+        df_display = df_full.loc[mask]
         
-        # Status Logic (Generic Codes)
-        if ahr < 0.45:
-            state = "ZONE L (Undershoot)"
-            color = "#28a745" # Green
-        elif 0.45 <= ahr <= 1.2:
-            state = "ZONE M (Accumulation)"
-            color = "#007bff" # Blue
-        elif 1.2 < ahr <= 4.0:
-            state = "ZONE N (Neutral)"
-            color = "#fd7e14" # Orange
+        if len(df_display) > 0:
+            last = df_full.iloc[-1]
+            ahr = last['AHR999'] if'AHR999' in last else 0
+            price = last['Close']
+            
+            # 状态颜色逻辑
+            if ahr < 0.45:
+                state = "ZONE L (Undershoot)"
+                color = "#28a745"
+            elif 0.45 <= ahr <= 1.2:
+                state = "ZONE M (Accumulation)"
+                color = "#007bff"
+            elif 1.2 < ahr <= 4.0:
+                state = "ZONE N (Neutral)"
+                color = "#fd7e14"
+            else:
+                state = "ZONE H (Overshoot)"
+                color = "#dc3545"
+
+            # 指标卡片
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-item">
+                    <div style="font-size:0.9em; color:#666;">CURRENT VALUE</div>
+                    <div class="metric-value">${price:,.2f}</div>
+                </div>
+                <div class="metric-item">
+                    <div style="font-size:0.9em; color:#666;">DEVIATION INDEX</div>
+                    <div class="metric-value" style="color: {color}">{ahr:.4f}</div>
+                </div>
+                <div class="metric-item">
+                    <div style="font-size:0.9em; color:#666;">STATUS</div>
+                    <div class="metric-value" style="color: {color}">{state}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # 图表
+            fig = make_subplots(
+                rows=2, cols=1, 
+                shared_xaxes=True, 
+                vertical_spacing=0.1, 
+                row_heights=[0.6, 0.4],
+                subplot_titles=("Asset Value & Regression", "Deviation Index (DI)"),
+            )
+
+            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['Close'], name="Value", line=dict(color="#000080", width=1.5)), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['GeoMean'], name="Geo-Mean", line=dict(color="#555555", width=1.5, dash='dot')), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['Predicted'], name="Model", line=dict(color="#800080", width=1.5, dash='dash')), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['AHR999'], name="DI Value", line=dict(color="#d35400", width=1.5)), row=2, col=1)
+
+            fig.add_hline(y=0.45, line_color="green", line_dash="dash", row=2, col=1)
+            fig.add_hline(y=1.2, line_color="blue", line_dash="dot", row=2, col=1)
+            fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
+
+            # --- 关键修改：调整边距和图例位置 ---
+            fig.update_layout(
+                height=700,
+                template="plotly_white",
+                font=dict(family="Times New Roman", size=14, color="#000"),
+                # t=50: 防止标题顶到边框; b=80: 给底部图例留出空间
+                margin=dict(l=40, r=40, t=50, b=80), 
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                # 图例移至最下方，避免覆盖图表或标题
+                legend=dict(
+                    orientation="h", 
+                    y=-0.15, 
+                    x=0.5, 
+                    xanchor="center",
+                    bgcolor="rgba(255,255,255,0.8)", 
+                    bordercolor="black", 
+                    borderwidth=1
+                )
+            )
+            
+            fig.update_xaxes(
+                showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True,
+                rangeslider=dict(visible=False) 
+            )
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
+
+            # 纯净图表 (已移除外框 div)
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+            
+            st.markdown(f"""
+            <div style="background-color: #f0f0f0; padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
+                <b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} | <b>MODE:</b> {note}
+            </div>
+            """, unsafe_allow_html=True)
+            
         else:
-            state = "ZONE H (Overshoot)"
-            color = "#dc3545" # Red
-
-        # Dashboard
-        st.markdown(f"""
-        <div class="metric-container">
-            <div class="metric-item">
-                <div class="metric-label">Current Value</div>
-                <div class="metric-value">{price:,.2f}</div>
-            </div>
-            <div class="metric-item">
-                <div class="metric-label">Deviation Index</div>
-                <div class="metric-value" style="color: {color}">{ahr:.4f}</div>
-            </div>
-            <div class="metric-item">
-                <div class="metric-label">Zone Status</div>
-                <div class="metric-value" style="color: {color}">{state}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # --- Charting ---
-        # Calculate time range length to determine which buttons to display
-        days_range = (end_date - start_date).days
-        
-        # Build dynamic button list based on selected time range
-        range_buttons = [
-            dict(count=1, label="1D", step="day", stepmode="backward"),
-        ]
-        
-        if days_range >= 3:
-            range_buttons.append(dict(count=3, label="3D", step="day", stepmode="backward"))
-        if days_range >= 7:
-            range_buttons.append(dict(count=7, label="1W", step="day", stepmode="backward"))
-        if days_range >= 14:
-            range_buttons.append(dict(count=14, label="2W", step="day", stepmode="backward"))
-        if days_range >= 30:
-            range_buttons.append(dict(count=1, label="1M", step="month", stepmode="backward"))
-        if days_range >= 90:
-            range_buttons.append(dict(count=3, label="3M", step="month", stepmode="backward"))
-        if days_range >= 180:
-            range_buttons.append(dict(count=6, label="6M", step="month", stepmode="backward"))
-        if days_range >= 365:
-            range_buttons.append(dict(count=1, label="1Y", step="year", stepmode="backward"))
-        if days_range >= 1095:
-            range_buttons.append(dict(count=3, label="3Y", step="year", stepmode="backward"))
-        
-        # Always add MAX button
-        range_buttons.append(dict(step="all", label="MAX"))
-        
-        fig = make_subplots(
-            rows=2, cols=1, 
-            shared_xaxes=True, 
-            vertical_spacing=0.12, 
-            row_heights=[0.6, 0.4],
-            subplot_titles=("Asset Value & Regression", "Deviation Index (DI)"),
-            specs=[[{"secondary_y": False}], [{"secondary_y": False}]]
-        )
-
-        # Top Chart
-        fig.add_trace(go.Scatter(
-            x=df_display.index, y=df_display['Close'], 
-            name="Value", 
-            line=dict(color="#000080", width=1.5)
-        ), row=1, col=1)
-        
-        fig.add_trace(go.Scatter(
-            x=df_display.index, y=df_display['GeoMean'], 
-            name="Geo-Mean (200)", 
-            line=dict(color="#555555", width=1.5, dash='dot')
-        ), row=1, col=1)
-        
-        fig.add_trace(go.Scatter(
-            x=df_display.index, y=df_display['Predicted'], 
-            name="Reg. Model", 
-            line=dict(color="#800080", width=1.5, dash='dash')
-        ), row=1, col=1)
-
-        # Bottom Chart
-        fig.add_trace(go.Scatter(
-            x=df_display.index, y=df_display['AHR999'], 
-            name="DI Value", 
-            line=dict(color="#d35400", width=1.5)
-        ), row=2, col=1)
-
-        # Backgrounds
-        fig.add_hrect(y0=0, y1=0.45, fillcolor="green", opacity=0.1, layer="below", line_width=0, row=2, col=1)
-        fig.add_hrect(y0=4.0, y1=100, fillcolor="red", opacity=0.1, layer="below", line_width=0, row=2, col=1)
-
-        # Lines
-        fig.add_hline(y=0.45, line_color="green", line_dash="dash", annotation_text="L-Bound (0.45)", row=2, col=1)
-        fig.add_hline(y=1.2, line_color="blue", line_dash="dot", annotation_text="M-Bound (1.20)", row=2, col=1)
-        fig.add_hline(y=4.0, line_color="red", line_dash="dash", annotation_text="H-Bound (4.00)", row=2, col=1)
-
-        # Layout
-        fig.update_layout(
-            height=750,
-            template="plotly_white",
-            hovermode="x unified",
-            font=dict(family="Times New Roman", size=14, color="#000"),
-            margin=dict(l=40, r=120, t=80, b=40),
-            
-            xaxis=dict(
-                rangeselector=dict(
-                    buttons=range_buttons,
-                    bgcolor="#f0f0f0",
-                    activecolor="#d0d0d0",
-                    font=dict(color="#000", family="Times New Roman"),
-                    y=1.15,
-                    yanchor="top",
-                    x=0.0,
-                    xanchor="left"
-                ),
-                type="date",
-                rangeslider=dict(visible=False),
-                range=[df_full.index.min(), df_full.index.max()]
-            ),
-            
-            yaxis=dict(title="Value (Log)", type="log", gridcolor="#f0f0f0", autorange=True),
-            yaxis2=dict(title="Index (Log)", type="log", gridcolor="#f0f0f0", autorange=True),
-            
-            legend=dict(orientation="h", yanchor="top", y=0.99, xanchor="left", x=0.01, font=dict(family="Times New Roman", size=11), bgcolor="rgba(255, 255, 255, 0.8)", bordercolor="#000", borderwidth=1)
-        )
-        
-        fig.update_xaxes(rangeslider_visible=True, rangeselector_font_family="Times New Roman")
-
-        st.plotly_chart(
-            fig, 
-            use_container_width=True,
-            config={'scrollZoom': False, 'displayModeBar': False}
-        )
-        
-        # Display Time Range Info - 90s Style
-        st.markdown(f"""
-        <div style="background-color: #f0f0f0; padding: 12px; border: 1px solid #000; margin-bottom: 10px; font-family: 'Times New Roman', serif;">
-            <b>FILTER APPLIED:</b> {start_date} → {end_date} | <b>DATA POINTS:</b> {len(df_display)} | <b>PERIOD:</b> {(end_date - start_date).days} days
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.caption(f"Calculation: {note} | Source: Public Data Repository")
-
+             st.warning("No data in selected range.")
     else:
-        if len(df_full) > 0 and len(df_full) <= 200:
-            st.warning(f"⚠️ Insufficient data points. ({len(df_full)} points available, 200+ required)")
-        else:
-            st.error("Data unavailable.")
+        st.error(f"Unable to fetch data. Error details: {note}")
