@@ -10,27 +10,29 @@ from plotly.subplots import make_subplots
 # --- 1. 页面配置 ---
 st.set_page_config(page_title="Data Dashboard", layout="wide")
 
-# --- 2. 样式设置---
+# --- 2. 状态初始化 ---
+if'ticker' not in st.session_state:
+    st.session_state.ticker = "BTC-USD"
+
+# --- 3. 样式设置 ---
 st.markdown("""
 <style>
     /* ============================================================ */
-    /* 1. 全局字体与基础 */
+    /* 1. 全局基础 */
     /* ============================================================ */
     .stApp {
         background-color: #ffffff;
         font-family: 'Times New Roman', Times, serif;
         color: #000000;
     }
-    
     h1, h2, h3, label, p, div, span, li {
         font-family: 'Times New Roman', Times, serif !important;
         color: #000000 !important;
     }
-    
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 颜色与容器 */
+    /* 2. 颜色定义 (覆盖全局黑色) */
     /* ============================================================ */
     .retro-color-green, .retro-color-green * { color: #28a745 !important; }
     .retro-color-blue, .retro-color-blue * { color: #007bff !important; }
@@ -38,163 +40,108 @@ st.markdown("""
     .retro-color-red, .retro-color-red * { color: #dc3545 !important; }
     .retro-color-gray, .retro-color-gray * { color: #666666 !important; }
 
+    /* ============================================================ */
+    /* 3. 容器与边框 */
+    /* ============================================================ */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
         box-shadow: none !important;
         background-color: #ffffff !important;
         padding: 0px !important;
-        overflow: visible !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"] > * {
         border-radius: 0px !important;
     }
 
-    /* 左右高度拉伸对齐 */
-    div[data-testid="stHorizontalBlock"] { align-items: stretch !important; }
-    div[data-testid="column"] { display: flex !important; flex-direction: column !important; }
-    div[data-testid="column"] > div > div > div > div[data-testid="stVerticalBlockBorderWrapper"] {
-        flex-grow: 1 !important; display: flex !important; flex-direction: column !important;
-    }
-    div[data-testid="column"] div[data-testid="stVerticalBlock"] { flex-grow: 1 !important; }
-
     /* ============================================================ */
-    /* 3. 标题与间距 (Header) */
+    /* 4. 按钮样式 */
     /* ============================================================ */
-    .retro-header-native {
-        background-color: #e0e0e0;
-        color: #000000 !important;
-        font-weight: bold;
-        text-transform: uppercase;
-        margin-top: 0px !important;
-        margin-left: 0px !important;
-        margin-right: 0px !important;
-        /* [间距] 标题下方 15px */
-        margin-bottom: 15px !important;
-        width: 100% !important;
-        padding: 8px 0px;
-        border-bottom: 1px solid #000000;
-        font-size: 1rem;
-        letter-spacing: 0.05em;
-        text-align: center;
-        line-height: 1.2;
-    }
-    
-    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] {
-        padding-left: 10px; padding-right: 10px;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"] .stElementContainer {
-        padding-left: 10px; padding-right: 10px;
-    }
-
-    /* ============================================================ */
-    /* 4. [核心手术] 组件“抽脂”工程 */
-    /* ============================================================ */
-    
-    /* --- Selectbox 外层 --- */
-    div[data-testid="stSelectbox"] { 
-        margin-top: 0px !important;
-        margin-bottom: 15px !important; /* 保持间距 */
-    }
-
-    /* [新增]：专门针对 Selectbox 的 Label 进行微型化处理 */
-    div[data-testid="stSelectbox"] label {
-        display: block !important; /* 恢复显示 */
-        font-size: 10px !important; /* 极小字体 */
-        font-family: 'Courier New', Courier, monospace !important; /* 使用等宽字体增加科技感 */
-        text-transform: uppercase !important;
-        font-weight: bold !important;
-        margin-bottom: 2px !important; /* 紧贴输入框 */
-        line-height: 1 !important;
-        letter-spacing: 0.05em !important;
-    }
-
-    /* --- BaseWeb Select 内部 --- */
-    
-    /* 1. 外框：锁定 28px */
-    div[data-baseweb="select"] > div {
-        border: 1px solid #000000 !important;
-        border-radius: 0px !important;
-        background-color: #ffffff !important;
-        box-shadow: none !important;
-        height: 28px !important;
-        min-height: 28px !important;
-        max-height: 28px !important;
-        padding: 0px !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-    
-    /* 2. 内部文字容器 */
-    div[data-baseweb="select"] > div > div {
-        padding-top: 0px !important;
-        padding-bottom: 0px !important;
-        padding-left: 8px !important;
-        margin: 0px !important;
-        height: 100% !important;
-        display: flex !important;
-        align-items: center !important;
-        line-height: 1 !important;
-    }
-
-    /* [新增]：隐藏输入光标，模拟“禁止手动输入”的视觉效果 */
-    input[role="combobox"] {
-        caret-color: transparent !important; /* 光标透明 */
-        cursor: default !important; /* 鼠标变为默认箭头 */
-    }
-
-    /* 3. 图标 */
-    div[data-baseweb="select"] > div > div:last-child {
-        padding-right: 5px !important;
-    }
-    
-    /* 4. 浮层菜单 */
-    div[data-baseweb="popover"] > div, div[data-baseweb="menu"] {
-        border: 1px solid #000000 !important;
-        border-radius: 0px !important;
-    }
-
-    /* --- Button --- */
-    
     div.stButton {
         margin-top: 0px !important;
         width: 100%;
-        padding-bottom: 10px !important;
+        padding-bottom: 0px !important;
     }
 
     .stButton > button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
-        background-color: #e0e0e0 !important;
+        background-color: #ffffff !important; /* 默认白底 */
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
-        height: 28px !important;
-        min-height: 28px !important;
+        
+        /* 强制高度 32px */
+        height: 32px !important;
+        min-height: 32px !important;
         padding: 0px !important;
+        
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        font-size: 0.75rem !important;
+        
+        font-size: 0.85rem !important;
         letter-spacing: 0.05em;
+        font-family: 'Courier New', Courier, monospace !important;
     }
     
-    .stButton > button:active { box-shadow: none !important; transform: translate(1px, 1px); }
-    .stButton > button:hover { background-color: #eaeaea !important; border-color: #000 !important; color: #000 !important; }
+    .stButton > button:hover {
+        background-color: #f0f0f0 !important;
+        border-color: #000 !important;
+        color: #000 !important;
+    }
+    
+    .stButton > button:active {
+        box-shadow: none !important;
+        transform: translate(1px, 1px);
+    }
 
-    /* 其他组件样式 */
+    /* ============================================================ */
+    /* 5. 辅助样式 */
+    /* ============================================================ */
+    /* 去掉 Slider 刻度 */
     div[data-testid="stSliderTickBar"], div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p { display: none !important; }
     .stSlider > div > div > div > div { height: 6px !important; background-color: #c0c0c0 !important; border: 1px solid #808080 !important; border-radius: 0px !important; }
     [data-testid="stSliderThumb"] { height: 18px !important; width: 18px !important; border-radius: 0px !important; background-color: #000000 !important; border: 1px solid #ffffff !important; top: -6px !important; }
     
+    /* 指标卡片 */
     .metric-container { display: flex; justify-content: space-between; background-color: #f9f9f9; padding: 15px; border: 1px solid #000000; margin-bottom: 20px; }
     .metric-item { text-align: center; width: 33%; border-right: 1px solid #ccc; }
     .metric-item:last-child { border-right: none; }
     .metric-value { font-size: 1.6em; font-weight: bold; }
+    
+    /* 图例文字 */
+    .legend-text { font-size: 0.85rem !important; margin-right: 15px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 数据逻辑 ---
+# --- 4. 动态 CSS 注入 (用于按钮高亮) ---
+# 根据当前选中的 ticker，动态注入 CSS 让对应的按钮变黑（反色）
+if st.session_state.ticker == "BTC-USD":
+    st.markdown("""
+    <style>
+        /* 第一个 Column (BTC) 的按钮变黑 */
+        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+elif st.session_state.ticker == "ETH-USD":
+    st.markdown("""
+    <style>
+        /* 第二个 Column (ETH) 的按钮变黑 */
+        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+# --- 5. 数据逻辑 ---
 @st.cache_data(ttl=3600)
 def get_data_and_calc(ticker):
     try:
@@ -236,10 +183,11 @@ def get_data_and_calc(ticker):
         return df, note
     except Exception as e: return pd.DataFrame(), f"System Error: {str(e)}"
 
-# --- 4. 页面布局 ---
+# --- 6. 页面布局 ---
 
+# 标题区域
 st.markdown("""
-<div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px;">
+<div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
     <h1 style="font-family: 'Courier New', Courier, monospace; text-transform: uppercase; letter-spacing: 2px; font-size: 2.2rem; margin: 0;">
         Statistical Deviation Monitor
     </h1>
@@ -249,36 +197,42 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-col_l, col_r = st.columns([1, 2], gap="large")
-
-# 左侧：配置
-with col_l:
-    with st.container(border=True):
-        st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
-        # Selectbox (去掉了 hidden 属性，恢复默认，但通过CSS控制样式)
-        ticker = st.selectbox("Target Asset", options=["BTC-USD", "ETH-USD"], index=0)
-        # Button
-        if st.button("RELOAD DATASET", use_container_width=True):
+# [核心改造]：整合工具栏 (Buttons + Legend)
+# 布局比例：[BTC] [ETH] [RELOAD] [Spacer] [Legend]
+with st.container(border=True):
+    # 使用 columns 来排布按钮和文字
+    c_btc, c_eth, c_reload, c_spacer, c_legend = st.columns([0.8, 0.8, 1, 0.5, 4.5])
+    
+    with c_btc:
+        if st.button("BTC", use_container_width=True):
+            st.session_state.ticker = "BTC-USD"
+            st.rerun()
+            
+    with c_eth:
+        if st.button("ETH", use_container_width=True):
+            st.session_state.ticker = "ETH-USD"
+            st.rerun()
+            
+    with c_reload:
+        if st.button("RELOAD DATA", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-
-# 右侧：指南
-with col_r:
-    with st.container(border=True):
-        st.markdown('<div class="retro-header-native">REFERENCE GUIDE</div>', unsafe_allow_html=True)
+            
+    # 右侧：横向排列的 Reference Guide
+    with c_legend:
         st.markdown("""
-        <div style="padding-bottom: 10px;">
-            <div style="margin-bottom: 10px; display: flex; align-items: center;">
-                <span style="display:inline-block; width:12px; height:12px; background-color:#28a745; border:1px solid black; margin-right:10px;"></span>
-                <span><b>L-Line (0.45):</b> Lower statistical bound. Historical buy zone.</span>
+        <div style="display: flex; align-items: center; justify-content: flex-end; height: 32px;">
+            <div style="display: flex; align-items: center; margin-left: 15px;">
+                <span style="width:10px; height:10px; background-color:#28a745; border:1px solid black; margin-right:6px;"></span>
+                <span class="legend-text"><b>L:</b> Buy</span>
             </div>
-            <div style="margin-bottom: 10px; display: flex; align-items: center;">
-                <span style="display:inline-block; width:12px; height:12px; background-color:#007bff; border:1px solid black; margin-right:10px;"></span>
-                <span><b>M-Line (1.20):</b> Mean accumulation threshold.</span>
+            <div style="display: flex; align-items: center; margin-left: 15px;">
+                <span style="width:10px; height:10px; background-color:#007bff; border:1px solid black; margin-right:6px;"></span>
+                <span class="legend-text"><b>M:</b> Accum</span>
             </div>
-            <div style="margin-bottom: 0px; display: flex; align-items: center;">
-                <span style="display:inline-block; width:12px; height:12px; background-color:#dc3545; border:1px solid black; margin-right:10px;"></span>
-                <span><b>H-Line (4.00):</b> Upper statistical bound. Variance warning.</span>
+            <div style="display: flex; align-items: center; margin-left: 15px;">
+                <span style="width:10px; height:10px; background-color:#dc3545; border:1px solid black; margin-right:6px;"></span>
+                <span class="legend-text"><b>H:</b> Sell</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -286,12 +240,14 @@ with col_r:
 # 时间选择器
 min_date = datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
-slider_key = f"slider_{ticker}"
+slider_key = f"slider_{st.session_state.ticker}"
 if slider_key not in st.session_state:
     st.session_state[slider_key] = (max_date - timedelta(days=365), max_date)
 
+# 稍微留一点间距
+st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
+
 with st.container(border=True):
-    st.markdown('<div class="retro-header-native">TIME RANGE SLICER</div>', unsafe_allow_html=True)
     c_start, c_end = st.columns([1, 1])
     current_val = st.session_state[slider_key]
     with c_start: st.markdown(f"<div style='padding-left:10px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
@@ -302,9 +258,9 @@ with st.container(border=True):
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
 
-# --- 5. 核心分析展示 ---
+# --- 7. 核心分析展示 ---
 with st.spinner("Processing data..."):
-    df, note = get_data_and_calc(ticker)
+    df, note = get_data_and_calc(st.session_state.ticker)
     df_full = df.copy()
     if not df_full.empty:
         mask = (df_full.index >= pd.to_datetime(start_date)) & (df_full.index <= pd.to_datetime(end_date))
