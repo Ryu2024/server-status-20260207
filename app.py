@@ -276,16 +276,13 @@ with st.spinner("Processing data..."):
             elif 1.2 < ahr <= 4.0: state = "ZONE N (Neutral)"; css_class = "retro-color-orange"
             else: state = "ZONE H (Overshoot)"; css_class = "retro-color-red"
 
-            c_pad_l, c_main, c_pad_r = st.columns([0.8, 10, 0.4])
-
-            with c_main:
-                st.markdown(f"""
-                <div class="metric-container">
-                    <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">CURRENT VALUE</div><div class="metric-value">${price:,.2f}</div></div>
-                    <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">DEVIATION INDEX</div><div class="metric-value {css_class}">{ahr:.4f}</div></div>
-                    <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">STATUS</div><div class="metric-value {css_class}">{state}</div></div>
-                </div>
-                """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">CURRENT VALUE</div><div class="metric-value">${price:,.2f}</div></div>
+                <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">DEVIATION INDEX</div><div class="metric-value {css_class}">{ahr:.4f}</div></div>
+                <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">STATUS</div><div class="metric-value {css_class}">{state}</div></div>
+            </div>
+            """, unsafe_allow_html=True)
 
             fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1, row_heights=[0.6, 0.4], subplot_titles=("Asset Value & Regression", "Deviation Index (DI)"))
             fig.add_trace(go.Scatter(x=df_display.index, y=df_display['Close'], name="Value", line=dict(color="#000080", width=1.5)), row=1, col=1)
