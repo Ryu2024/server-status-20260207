@@ -22,6 +22,7 @@ st.markdown("""
         color: #000000;
     }
     
+    /* 这里的 !important 导致了颜色失效，我们将在行内样式中覆盖它 */
     h1, h2, h3, label, p, div, span, li {
         font-family: 'Times New Roman', Times, serif !important;
         color: #000000 !important;
@@ -30,12 +31,19 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 暴力修复 Streamlit 原生容器圆角 (针对 Configuration/Time) */
+    /* 2. [核心修复] 强制覆盖 st.container(border=True) 样式 */
     /* ============================================================ */
-    div[data-testid="stVerticalBlockBorderWrapper"],
-    div[data-testid="stVerticalBlockBorderWrapper"] > div {
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid #000000 !important;
         border-radius: 0px !important;
-        border-color: #000000 !important;
+        box-shadow: none !important;
+        background-color: #ffffff !important;
+        padding: 0px !important;
+        overflow: visible !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] > * {
+        border-radius: 0px !important;
     }
 
     /* ============================================================ */
@@ -47,7 +55,7 @@ st.markdown("""
         padding: 0px; 
         margin-bottom: 20px;
     }
-    
+
     .retro-custom-header {
         background-color: #e0e0e0;
         color: #000000;
@@ -62,7 +70,7 @@ st.markdown("""
     }
     
     .retro-custom-content {
-        padding: 15px 15px 20px 15px; 
+        padding: 15px 15px 20px 15px;
     }
 
     /* ============================================================ */
@@ -73,17 +81,27 @@ st.markdown("""
         color: #000000 !important;
         font-weight: bold;
         text-transform: uppercase;
-        margin-top: -16px !important;
-        margin-left: -16px !important;
-        margin-right: -16px !important;
+        margin-top: 0px !important;
+        margin-left: 0px !important;
+        margin-right: 0px !important;
         margin-bottom: 15px !important;
-        width: calc(100% + 32px) !important;
+        width: 100% !important;
         padding: 8px 0px;
         border-bottom: 1px solid #000000;
         font-size: 1rem;
         letter-spacing: 0.05em;
         text-align: center;
         line-height: 1.2;
+    }
+    
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    div[data-testid="stVerticalBlockBorderWrapper"] .stElementContainer {
+        padding-left: 10px;
+        padding-right: 10px;
     }
 
     /* ============================================================ */
@@ -100,7 +118,7 @@ st.markdown("""
         border-radius: 0px !important;
     }
     div[data-testid="stSelectbox"] { margin-bottom: 5px !important; }
-    
+
     div[data-testid="stSliderTickBar"],
     div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
@@ -151,7 +169,9 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    .stButton { margin-top: 0px !important; }
+    .stButton { 
+        padding-bottom: 15px !important;
+    }
     .stButton>button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
@@ -178,7 +198,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 数据逻辑 (修复语法错误) ---
+# --- 3. 数据逻辑 ---
 @st.cache_data(ttl=3600)
 def get_data_and_calc(ticker):
     try:
@@ -189,7 +209,6 @@ def get_data_and_calc(ticker):
 
         if isinstance(df.columns, pd.MultiIndex):
             if'Close' in df.columns.get_level_values(0):
-                # [修复点 1]：恢复了被误删的 pandas xs 提取代码
                 df = df.xs('Close', axis=1, level=0, drop_level=True)
             else:
                  df.columns = df.columns.droplevel(1)
@@ -247,15 +266,15 @@ def get_data_and_calc(ticker):
 
 # --- 4. 页面布局 ---
 
-# [修复点 2]：标题替换为 Web 1.0 风格 (Courier New + 边框)
+# Web 1.0 风格标题
 st.markdown("""
 <div style="
-    text-align: center; 
+    text-align: center;
     margin-bottom: 30px; 
     border-bottom: 2px solid #000; 
     padding-bottom: 10px;">
     <h1 style="
-        font-family: 'Courier New', Courier, monospace; 
+        font-family: 'Courier New', Courier, monospace;
         text-transform: uppercase; 
         letter-spacing: 2px; 
         font-size: 2.2rem; 
@@ -285,7 +304,7 @@ with col_l:
             st.cache_data.clear()
             st.rerun()
 
-# 右侧：指南 (纯 HTML 盒子)
+# 右侧：指南
 with col_r:
     st.markdown("""
     <div class="retro-custom-box">
@@ -325,10 +344,12 @@ with st.container(border=True):
     current_val = st.session_state[slider_key]
     
     with c_start:
-        st.markdown(f"<div style='padding-left:0px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='padding-left:10px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
     with c_end:
-        st.markdown(f"<div style='text-align: right; padding-right:0px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: right; padding-right:10px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
     
+    # 稍微调整滑块容器的 padding
+    st.markdown("<div style='padding: 0px 10px;'>", unsafe_allow_html=True)
     start_date, end_date = st.slider(
         "Time Range",
         min_value=min_date,
@@ -338,6 +359,10 @@ with st.container(border=True):
         label_visibility="collapsed",
         key=slider_key
     )
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # 底部稍微留空，防止滑块贴底
+    st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
 
 # --- 5. 核心分析展示 ---
 
@@ -368,19 +393,20 @@ with st.spinner("Processing data..."):
                 state = "ZONE H (Overshoot)"
                 color = "#dc3545"
 
+            # [修复点]：增加 !important 以强制覆盖全局黑色样式
             st.markdown(f"""
             <div class="metric-container">
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666;">CURRENT VALUE</div>
+                    <div style="font-size:0.9em; color:#666 !important;">CURRENT VALUE</div>
                     <div class="metric-value">${price:,.2f}</div>
                 </div>
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666;">DEVIATION INDEX</div>
-                    <div class="metric-value" style="color: {color}">{ahr:.4f}</div>
+                    <div style="font-size:0.9em; color:#666 !important;">DEVIATION INDEX</div>
+                    <div class="metric-value" style="color: {color} !important;">{ahr:.4f}</div>
                 </div>
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666;">STATUS</div>
-                    <div class="metric-value" style="color: {color}">{state}</div>
+                    <div style="font-size:0.9em; color:#666 !important;">STATUS</div>
+                    <div class="metric-value" style="color: {color} !important;">{state}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
