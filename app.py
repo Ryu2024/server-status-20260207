@@ -18,13 +18,22 @@ if'ticker' not in st.session_state:
 st.markdown("""
 <style>
     /* ============================================================ */
-    /* 1. 全局基础 */
+    /* 1. 全局基础与容器限制 (核心修改) */
     /* ============================================================ */
     .stApp {
         background-color: #ffffff;
         font-family: 'Times New Roman', Times, serif;
         color: #000000;
     }
+    
+    /* [核心修改]：限制页面主容器的最大宽度，使其在宽屏下不至于拉得太长 */
+    div[data-testid="block-container"] {
+        max-width: 1200px;   /* 限制最大宽度为 1200px，你可以根据需要改为 1000px 或 1400px */
+        padding-top: 2rem;   /* 顶部留白 */
+        padding-bottom: 2rem;
+        margin: 0 auto;      /* 居中显示 */
+    }
+
     h1, h2, h3, label, p, div, span, li {
         font-family: 'Times New Roman', Times, serif !important;
         color: #000000 !important;
@@ -116,11 +125,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 4. 动态 CSS 注入 (用于按钮高亮) ---
-# 根据当前选中的 ticker，动态注入 CSS 让对应的按钮变黑（反色）
 if st.session_state.ticker == "BTC-USD":
     st.markdown("""
     <style>
-        /* 第一个 Column (BTC) 的按钮变黑 */
         div[data-testid="column"]:nth-of-type(1) div.stButton > button {
             background-color: #000000 !important;
             color: #ffffff !important;
@@ -131,7 +138,6 @@ if st.session_state.ticker == "BTC-USD":
 elif st.session_state.ticker == "ETH-USD":
     st.markdown("""
     <style>
-        /* 第二个 Column (ETH) 的按钮变黑 */
         div[data-testid="column"]:nth-of-type(2) div.stButton > button {
             background-color: #000000 !important;
             color: #ffffff !important;
@@ -197,10 +203,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# [核心改造]：整合工具栏 (Buttons + Legend)
-# 布局比例：[BTC] [ETH] [RELOAD] [Spacer] [Legend]
+# 工具栏 (Buttons + Legend)
 with st.container(border=True):
-    # 使用 columns 来排布按钮和文字
+    # 这里不需要调整比例，因为 CSS 已经限制了总宽度，它们会自动变得紧凑
     c_btc, c_eth, c_reload, c_spacer, c_legend = st.columns([0.8, 0.8, 1, 0.5, 4.5])
     
     with c_btc:
@@ -218,7 +223,6 @@ with st.container(border=True):
             st.cache_data.clear()
             st.rerun()
             
-    # 右侧：横向排列的 Reference Guide
     with c_legend:
         st.markdown("""
         <div style="display: flex; align-items: center; justify-content: flex-end; height: 32px;">
@@ -244,7 +248,6 @@ slider_key = f"slider_{st.session_state.ticker}"
 if slider_key not in st.session_state:
     st.session_state[slider_key] = (max_date - timedelta(days=365), max_date)
 
-# 稍微留一点间距
 st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
 
 with st.container(border=True):
@@ -294,21 +297,12 @@ with st.spinner("Processing data..."):
             fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
 
             fig.update_layout(
-                # 1. 保持较大的总高度，确保图表本身不会变小
                 height=900,  
-                
                 template="plotly_white",
                 font=dict(family="Times New Roman", size=14, color="#000"),
-                
-                # 2. 调整边距 (Margin)
-                # 关键是加大顶部边距 t (Top)。
-                # 我们把它设为 140，给标题向上移动预留出充足的“领空”，防止标题跑出画布。
                 margin=dict(l=60, r=40, t=140, b=100),
-                
                 plot_bgcolor="white",
                 paper_bgcolor="white",
-                
-                # 图例位置保持不变
                 legend=dict(
                     orientation="h",
                     y=-0.1,
@@ -320,8 +314,6 @@ with st.spinner("Processing data..."):
                 )
             )
 
-        
-            # 强制所有子图的标题文字大幅度向上移动，从而彻底与边框线分离。
             fig.update_annotations(yshift=15)  
             fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, rangeslider=dict(visible=False))
             fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
