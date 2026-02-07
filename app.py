@@ -10,323 +10,207 @@ from plotly.subplots import make_subplots
 # --- 1. 页面配置 ---
 st.set_page_config(page_title="Data Dashboard", layout="wide")
 
-# --- 2. 状态初始化 ---
-if'ticker' not in st.session_state:
-    st.session_state.ticker = "BTC-USD"
-
-# --- 3. 样式设置 ---
+# --- 2. 样式设置 (保留你的 Retro 风格) ---
 st.markdown("""
 <style>
-    /* ============================================================ */
-    /* 1. 全局基础 */
-    /* ============================================================ */
-    .stApp {
-        background-color: #ffffff;
-        font-family: 'Times New Roman', Times, serif;
-        color: #000000;
-    }
-    h1, h2, h3, label, p, div, span, li {
-        font-family: 'Times New Roman', Times, serif !important;
-        color: #000000 !important;
-    }
+    .stApp { background-color: #ffffff; font-family: 'Times New Roman', serif; color: #000; }
+    div[data-testid="block-container"] { max-width: 1200px; padding-top: 2rem; padding-bottom: 2rem; margin: 0 auto; }
+    /* 隐藏 Streamlit 默认的图表工具栏，让界面更像原生 App */
     .modebar { display: none !important; }
-
-    /* ============================================================ */
-    /* 2. 颜色定义 (覆盖全局黑色) */
-    /* ============================================================ */
-    .retro-color-green, .retro-color-green * { color: #28a745 !important; }
-    .retro-color-blue, .retro-color-blue * { color: #007bff !important; }
-    .retro-color-orange, .retro-color-orange * { color: #fd7e14 !important; }
-    .retro-color-red, .retro-color-red * { color: #dc3545 !important; }
-    .retro-color-gray, .retro-color-gray * { color: #666666 !important; }
-
-    /* ============================================================ */
-    /* 3. 容器与边框 */
-    /* ============================================================ */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        border: 1px solid #000000 !important;
-        border-radius: 0px !important;
-        box-shadow: none !important;
-        background-color: #ffffff !important;
-        padding: 0px !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"] > * {
-        border-radius: 0px !important;
-    }
-
-    /* ============================================================ */
-    /* 4. 按钮样式 */
-    /* ============================================================ */
-    div.stButton {
-        margin-top: 0px !important;
-        width: 100%;
-        padding-bottom: 0px !important;
-    }
-
-    .stButton > button {
-        border-radius: 0px !important;
-        border: 1px solid #000 !important;
-        background-color: #ffffff !important; /* 默认白底 */
-        color: #000 !important;
-        font-weight: bold !important;
-        box-shadow: 1px 1px 0px #888 !important;
-        
-        /* 强制高度 32px */
-        height: 32px !important;
-        min-height: 32px !important;
-        padding: 0px !important;
-        
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        
-        font-size: 0.85rem !important;
-        letter-spacing: 0.05em;
-        font-family: 'Courier New', Courier, monospace !important;
-    }
-    
-    .stButton > button:hover {
-        background-color: #f0f0f0 !important;
-        border-color: #000 !important;
-        color: #000 !important;
-    }
-    
-    .stButton > button:active {
-        box-shadow: none !important;
-        transform: translate(1px, 1px);
-    }
-
-    /* ============================================================ */
-    /* 5. 辅助样式 */
-    /* ============================================================ */
-    /* 去掉 Slider 刻度 */
-    div[data-testid="stSliderTickBar"], div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p { display: none !important; }
-    .stSlider > div > div > div > div { height: 6px !important; background-color: #c0c0c0 !important; border: 1px solid #808080 !important; border-radius: 0px !important; }
-    [data-testid="stSliderThumb"] { height: 18px !important; width: 18px !important; border-radius: 0px !important; background-color: #000000 !important; border: 1px solid #ffffff !important; top: -6px !important; }
-    
-    /* 指标卡片 */
-    .metric-container { display: flex; justify-content: space-between; background-color: #f9f9f9; padding: 15px; border: 1px solid #000000; margin-bottom: 20px; }
-    .metric-item { text-align: center; width: 33%; border-right: 1px solid #ccc; }
-    .metric-item:last-child { border-right: none; }
-    .metric-value { font-size: 1.6em; font-weight: bold; }
-    
-    /* 图例文字 */
-    .legend-text { font-size: 0.85rem !important; margin-right: 15px !important; }
+    h1, div { font-family: 'Times New Roman', serif !important; color: #000 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. 动态 CSS 注入 (用于按钮高亮) ---
-# 根据当前选中的 ticker，动态注入 CSS 让对应的按钮变黑（反色）
-if st.session_state.ticker == "BTC-USD":
-    st.markdown("""
-    <style>
-        /* 第一个 Column (BTC) 的按钮变黑 */
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-            background-color: #000000 !important;
-            color: #ffffff !important;
-            box-shadow: none !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-elif st.session_state.ticker == "ETH-USD":
-    st.markdown("""
-    <style>
-        /* 第二个 Column (ETH) 的按钮变黑 */
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            background-color: #000000 !important;
-            color: #ffffff !important;
-            box-shadow: none !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-
-# --- 5. 数据逻辑 ---
+# --- 3. 数据处理函数 (同时获取并计算 BTC 和 ETH) ---
 @st.cache_data(ttl=3600)
-def get_data_and_calc(ticker):
-    try:
-        df = yf.download(ticker, period="max", interval="1d", progress=False)
-        if df.empty: return pd.DataFrame(), "Error: No data returned."
-        if isinstance(df.columns, pd.MultiIndex):
-            if'Close' in df.columns.get_level_values(0): df = df.xs('Close', axis=1, level=0, drop_level=True)
-            else: df.columns = df.columns.droplevel(1)
-        if'Close' not in df.columns:
-            if len(df.columns) == 1: df.columns = ['Close']
+def get_all_data():
+    tickers = {"BTC-USD": "BTC", "ETH-USD": "ETH"}
+    data_store = {}
+    
+    for ticker, name in tickers.items():
+        try:
+            df = yf.download(ticker, period="max", interval="1d", progress=False)
+            if df.empty: continue
+            
+            # 清洗数据
+            if isinstance(df.columns, pd.MultiIndex):
+                if'Close' in df.columns.get_level_values(0): df = df.xs('Close', axis=1, level=0, drop_level=True)
+                else: df.columns = df.columns.droplevel(1)
+            if'Close' not in df.columns:
+                if len(df.columns) == 1: df.columns = ['Close']
+                else: continue
+            
+            df = df[['Close']].copy().sort_index().dropna()
+            df = df[df['Close'] > 0]
+            
+            # 计算指标
+            df['Log_Price'] = np.log(df['Close'])
+            df['GeoMean'] = np.exp(df['Log_Price'].rolling(window=200).mean())
+            
+            genesis_date = pd.Timestamp("2009-01-03")
+            df['Days'] = (df.index - genesis_date).days
+            df = df[df['Days'] > 0]
+            
+            # 回归模型
+            if ticker == "BTC-USD":
+                slope, intercept = 5.84, -17.01 # 固定参数
             else:
-                close_cols = [c for c in df.columns if'Close' in str(c)]
-                if close_cols: df = df[[close_cols[0]]].copy(); df.columns = ['Close']
-        if'Close' not in df.columns: return pd.DataFrame(), "Error: Could not find Close price."
-        df = df[['Close']].copy().sort_index()
-        if df.index.tz is not None: df.index = df.index.tz_localize(None)
-        df = df[~df.index.duplicated(keep='last')].dropna()
-        df = df[df['Close'] > 0]
-        df['Log_Price'] = np.log(df['Close'])
-        df['GeoMean'] = np.exp(df['Log_Price'].rolling(window=200).mean())
-        genesis_date = pd.Timestamp("2009-01-03")
-        df['Days'] = (df.index - genesis_date).days
-        df = df[df['Days'] > 0]
-        
-        if ticker == "BTC-USD":
-            slope = 5.84; intercept = -17.01
-            log_days = np.log10(df['Days'])
-            df['Predicted'] = 10 ** (slope * log_days + intercept)
-            note = "Method: Power Law (Fixed)"
-        else:
-            valid_data = df.dropna()
-            if len(valid_data) > 0:
-                x = np.log10(valid_data['Days'].values); y = np.log10(valid_data['Close'].values)
+                # 动态回归
+                valid = df.dropna()
+                x = np.log10(valid['Days'].values)
+                y = np.log10(valid['Close'].values)
                 slope, intercept, _, _, _ = linregress(x, y)
-                df['Predicted'] = 10 ** (intercept + slope * np.log10(df['Days']))
-                note = f"Method: Dynamic Reg (Beta {slope:.4f})"
-            else: df['Predicted'] = np.nan; note = "Insufficient Data"
-        df['AHR999'] = (df['Close'] / df['GeoMean']) * (df['Close'] / df['Predicted'])
-        return df, note
-    except Exception as e: return pd.DataFrame(), f"System Error: {str(e)}"
+                
+            log_days = np.log10(df['Days'])
+            df['Predicted'] = 10 ** (intercept + slope * log_days)
+            df['AHR999'] = (df['Close'] / df['GeoMean']) * (df['Close'] / df['Predicted'])
+            
+            data_store[name] = df
+        except:
+            continue
+            
+    return data_store
 
-# --- 6. 页面布局 ---
-
-# 标题区域
+# --- 4. 页面标题 ---
 st.markdown("""
-<div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
+<div style="text-align: center; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 10px;">
     <h1 style="font-family: 'Courier New', Courier, monospace; text-transform: uppercase; letter-spacing: 2px; font-size: 2.2rem; margin: 0;">
         Statistical Deviation Monitor
     </h1>
     <div style="font-family: 'Times New Roman'; font-size: 0.9rem; margin-top: 5px;">
-        SYSTEM STATUS: ONLINE
+        INTERACTIVE MODE (PLOTLY ENGINE)
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# [核心改造]：整合工具栏 (Buttons + Legend)
-# 布局比例：[BTC] [ETH] [RELOAD] [Spacer] [Legend]
-with st.container(border=True):
-    # 使用 columns 来排布按钮和文字
-    c_btc, c_eth, c_reload, c_spacer, c_legend = st.columns([0.8, 0.8, 1, 0.5, 4.5])
+# --- 5. 构建全交互图表 ---
+with st.spinner("Initializing Plotly Engine..."):
+    data = get_all_data()
     
-    with c_btc:
-        if st.button("BTC", use_container_width=True):
-            st.session_state.ticker = "BTC-USD"
-            st.rerun()
+    if "BTC" in data and "ETH" in data:
+        # 创建子图结构
+        fig = make_subplots(
+            rows=2, cols=1, 
+            shared_xaxes=True, 
+            vertical_spacing=0.08, 
+            row_heights=[0.7, 0.3],
+            subplot_titles=("Asset Price Model", "Deviation Index")
+        )
+
+        # ==========================================================
+        # 1. 添加所有 Trace (先把所有线条都画上去)
+        # ==========================================================
+        
+        # --- BTC Traces (默认显示) ---
+        btc = data['BTC']
+        # Trace 0: BTC Price
+        fig.add_trace(go.Scatter(x=btc.index, y=btc['Close'], name="BTC Price", visible=True, line=dict(color="#000000", width=1.5)), row=1, col=1)
+        # Trace 1: BTC Model
+        fig.add_trace(go.Scatter(x=btc.index, y=btc['Predicted'], name="BTC Model", visible=True, line=dict(color="#800080", width=1.5, dash='dash')), row=1, col=1)
+        # Trace 2: BTC AHR999
+        fig.add_trace(go.Scatter(x=btc.index, y=btc['AHR999'], name="BTC Dev", visible=True, line=dict(color="#d35400", width=1.5)), row=2, col=1)
+
+        # --- ETH Traces (默认隐藏 visible=False) ---
+        eth = data['ETH']
+        # Trace 3: ETH Price
+        fig.add_trace(go.Scatter(x=eth.index, y=eth['Close'], name="ETH Price", visible=False, line=dict(color="#000080", width=1.5)), row=1, col=1)
+        # Trace 4: ETH Model
+        fig.add_trace(go.Scatter(x=eth.index, y=eth['Predicted'], name="ETH Model", visible=False, line=dict(color="#800080", width=1.5, dash='dash')), row=1, col=1)
+        # Trace 5: ETH AHR999
+        fig.add_trace(go.Scatter(x=eth.index, y=eth['AHR999'], name="ETH Dev", visible=False, line=dict(color="#2980b9", width=1.5)), row=2, col=1)
+
+        # 添加参考线 (永远显示)
+        fig.add_hline(y=0.45, line_color="green", line_dash="dash", row=2, col=1)
+        fig.add_hline(y=1.2, line_color="blue", line_dash="dot", row=2, col=1)
+        fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
+
+        # ==========================================================
+        # 2. 定义 Buttons (Update Menus)
+        # ==========================================================
+        # 逻辑：点击 BTC，设置 visible=[True, True, True, False, False, False]
+        # 逻辑：点击 ETH，设置 visible=[False, False, False, True, True, True]
+        
+        updatemenus = [
+            dict(
+                type="buttons",
+                direction="right",
+                x=0.0, y=1.16, # 按钮位置 (图表左上角上方)
+                showactive=True,
+                bgcolor="#ffffff",
+                bordercolor="#000000",
+                borderwidth=1,
+                font=dict(family="Courier New", size=12, color="#000"),
+                buttons=list([
+                    dict(
+                        label="BTC-USD",
+                        method="update",
+                        args=[{"visible": [True, True, True, False, False, False]}, # 控制 Trace 可见性
+                              {"title": "Bitcoin Logarithmic Regression"}]          # 同时更新标题
+                    ),
+                    dict(
+                        label="ETH-USD",
+                        method="update",
+                        args=[{"visible": [False, False, False, True, True, True]},
+                              {"title": "Ethereum Logarithmic Regression"}]
+                    ),
+                ]),
+            )
+        ]
+
+        # ==========================================================
+        # 3. 布局设置 (包含 Range Slider)
+        # ==========================================================
+        fig.update_layout(
+            height=850,
+            template="plotly_white",
+            updatemenus=updatemenus,
+            title_text="Bitcoin Logarithmic Regression", # 默认标题
+            title_x=0.5,
+            title_y=0.98,
+            title_font=dict(family="Times New Roman", size=20),
+            font=dict(family="Times New Roman", size=14, color="#000"),
+            margin=dict(l=40, r=40, t=100, b=80), # 给按钮留出顶部空间
             
-    with c_eth:
-        if st.button("ETH", use_container_width=True):
-            st.session_state.ticker = "ETH-USD"
-            st.rerun()
+            # --- 核心：原生时间选择器 ---
+            xaxis=dict(
+                rangeselector=dict(
+                    buttons=list([
+                        dict(count=1, label="1Y", step="year", stepmode="backward"),
+                        dict(count=3, label="3Y", step="year", stepmode="backward"),
+                        dict(count=5, label="5Y", step="year", stepmode="backward"),
+                        dict(step="all", label="MAX")
+                    ]),
+                    bgcolor="#f0f0f0",
+                    bordercolor="#000",
+                    borderwidth=1,
+                    font=dict(family="Courier New", size=11)
+                ),
+                rangeslider=dict(
+                    visible=True, # 开启底部滑块
+                    thickness=0.08,
+                    bgcolor="#f9f9f9",
+                    bordercolor="#ccc"
+                ),
+                type="date"
+            ),
             
-    with c_reload:
-        if st.button("RELOAD", use_container_width=True):
-            st.cache_data.clear()
-            st.rerun()
-            
-    # 右侧：横向排列的 Reference Guide
-    with c_legend:
-        st.markdown("""
-        <div style="display: flex; align-items: center; justify-content: flex-end; height: 32px;">
-            <div style="display: flex; align-items: center; margin-left: 15px;">
-                <span style="width:10px; height:10px; background-color:#28a745; border:1px solid black; margin-right:6px;"></span>
-                <span class="legend-text"><b>L:</b> Buy</span>
-            </div>
-            <div style="display: flex; align-items: center; margin-left: 15px;">
-                <span style="width:10px; height:10px; background-color:#007bff; border:1px solid black; margin-right:6px;"></span>
-                <span class="legend-text"><b>M:</b> Accum</span>
-            </div>
-            <div style="display: flex; align-items: center; margin-left: 15px;">
-                <span style="width:10px; height:10px; background-color:#dc3545; border:1px solid black; margin-right:6px;"></span>
-                <span class="legend-text"><b>H:</b> Sell</span>
-            </div>
+            legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
+        )
+
+        fig.update_yaxes(type="log", row=1, col=1, gridcolor='#eee', zeroline=False)
+        fig.update_yaxes(gridcolor='#eee', zeroline=False, row=2, col=1)
+        fig.update_xaxes(gridcolor='#eee', showgrid=True)
+
+        # 渲染图表
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        
+        # 底部状态栏 (静态)
+        st.markdown(f"""
+        <div style="background-color: #f0f0f0; padding: 10px; border-top: 2px solid #000; font-size: 0.9em; display: flex; justify-content: space-between;">
+            <span><b>SYSTEM:</b> Plotly Native Mode</span>
+            <span><b>NOTE:</b> Use chart buttons to switch assets. Use bottom slider to zoom.</span>
         </div>
         """, unsafe_allow_html=True)
 
-# 时间选择器
-min_date = datetime(2009, 1, 3).date()
-max_date = datetime.today().date()
-slider_key = f"slider_{st.session_state.ticker}"
-if slider_key not in st.session_state:
-    st.session_state[slider_key] = (max_date - timedelta(days=365), max_date)
-
-# 稍微留一点间距
-st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
-
-with st.container(border=True):
-    c_start, c_end = st.columns([1, 1])
-    current_val = st.session_state[slider_key]
-    with c_start: st.markdown(f"<div style='padding-left:10px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
-    with c_end: st.markdown(f"<div style='text-align: right; padding-right:10px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
-    
-    st.markdown("<div style='padding: 0px 10px;'>", unsafe_allow_html=True)
-    start_date, end_date = st.slider("Time Range", min_value=min_date, max_value=max_date, value=st.session_state[slider_key], format="YYYY/MM/DD", label_visibility="collapsed", key=slider_key)
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
-
-# --- 7. 核心分析展示 ---
-with st.spinner("Processing data..."):
-    df, note = get_data_and_calc(st.session_state.ticker)
-    df_full = df.copy()
-    if not df_full.empty:
-        mask = (df_full.index >= pd.to_datetime(start_date)) & (df_full.index <= pd.to_datetime(end_date))
-        df_display = df_full.loc[mask]
-        
-        if len(df_display) > 0:
-            last = df_full.iloc[-1]
-            ahr = last['AHR999'] if'AHR999' in last else 0
-            price = last['Close']
-            
-            if ahr < 0.45: state = "ZONE L (Undershoot)"; css_class = "retro-color-green"
-            elif 0.45 <= ahr <= 1.2: state = "ZONE M (Accumulation)"; css_class = "retro-color-blue"
-            elif 1.2 < ahr <= 4.0: state = "ZONE N (Neutral)"; css_class = "retro-color-orange"
-            else: state = "ZONE H (Overshoot)"; css_class = "retro-color-red"
-
-            st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">CURRENT VALUE</div><div class="metric-value">${price:,.2f}</div></div>
-                <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">DEVIATION INDEX</div><div class="metric-value {css_class}">{ahr:.4f}</div></div>
-                <div class="metric-item"><div class="retro-color-gray" style="font-size:0.9em;">STATUS</div><div class="metric-value {css_class}">{state}</div></div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1, row_heights=[0.6, 0.4], subplot_titles=("Asset Value & Regression", "Deviation Index (DI)"))
-            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['Close'], name="Value", line=dict(color="#000080", width=1.5)), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['GeoMean'], name="Geo-Mean", line=dict(color="#555555", width=1.5, dash='dot')), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['Predicted'], name="Model", line=dict(color="#800080", width=1.5, dash='dash')), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_display.index, y=df_display['AHR999'], name="DI Value", line=dict(color="#d35400", width=1.5)), row=2, col=1)
-            fig.add_hline(y=0.45, line_color="green", line_dash="dash", row=2, col=1)
-            fig.add_hline(y=1.2, line_color="blue", line_dash="dot", row=2, col=1)
-            fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
-
-            fig.update_layout(
-                # 1. 保持较大的总高度，确保图表本身不会变小
-                height=900,  
-                
-                template="plotly_white",
-                font=dict(family="Times New Roman", size=14, color="#000"),
-                
-                # 2. 调整边距 (Margin)
-                # 关键是加大顶部边距 t (Top)。
-                # 我们把它设为 140，给标题向上移动预留出充足的“领空”，防止标题跑出画布。
-                margin=dict(l=60, r=40, t=140, b=100),
-                
-                plot_bgcolor="white",
-                paper_bgcolor="white",
-                
-                # 图例位置保持不变
-                legend=dict(
-                    orientation="h",
-                    y=-0.1,
-                    x=0.5,
-                    xanchor="center",
-                    bgcolor="rgba(255,255,255,0.8)",
-                    bordercolor="black",
-                    borderwidth=1
-                )
-            )
-
-        
-            # 强制所有子图的标题文字大幅度向上移动，从而彻底与边框线分离。
-            fig.update_annotations(yshift=13)  
-            fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, rangeslider=dict(visible=False))
-            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
-
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-            st.markdown(f"""<div style="background-color: #f0f0f0; padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;"><b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} | <b>MODE:</b> {note}</div>""", unsafe_allow_html=True)
-        else: st.warning("No data in selected range.")
-    else: st.error(f"Unable to fetch data. Error details: {note}")
+    else:
+        st.error("Failed to load market data.")
