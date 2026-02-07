@@ -22,7 +22,7 @@ st.markdown("""
         color: #000000;
     }
     
-    /* 全局强制黑色  */
+    /* 这里的 !important 保证全局字体，但颜色需要 specific class 覆盖 */
     h1, h2, h3, label, p, div, span, li {
         font-family: 'Times New Roman', Times, serif !important;
         color: #000000 !important;
@@ -34,7 +34,6 @@ st.markdown("""
     /* 2. [核心修复] 专用颜色类 (权重必须极高) */
     /* ============================================================ */
     /* 使用 * 通配符，强制覆盖 div 内部可能存在的 p 或 span 标签 */
-    
     .retro-color-green, .retro-color-green * { color: #28a745 !important; }
     .retro-color-blue, .retro-color-blue * { color: #007bff !important; }
     .retro-color-orange, .retro-color-orange * { color: #fd7e14 !important; }
@@ -42,8 +41,9 @@ st.markdown("""
     .retro-color-gray, .retro-color-gray * { color: #666666 !important; }
 
     /* ============================================================ */
-    /* 3. 容器与边框修复 */
+    /* 3. 容器与边框修复 (全局统一) */
     /* ============================================================ */
+    /* 针对 st.container(border=True) 的统一设置 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
@@ -58,34 +58,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 4. 自定义 HTML 盒子样式 */
-    /* ============================================================ */
-    .retro-custom-box {
-        border: 1px solid #000000;
-        background-color: #ffffff;
-        padding: 0px; 
-        margin-bottom: 20px;
-    }
-
-    .retro-custom-header {
-        background-color: #e0e0e0;
-        color: #000000;
-        font-weight: bold;
-        text-transform: uppercase;
-        padding: 8px 0px;
-        border-bottom: 1px solid #000000;
-        font-size: 1rem;
-        letter-spacing: 0.05em;
-        text-align: center;
-        line-height: 1.2;
-    }
-    
-    .retro-custom-content {
-        padding: 15px 15px 20px 15px;
-    }
-
-    /* ============================================================ */
-    /* 5. 原生容器内的标题样式 */
+    /* 4. 原生容器内的标题样式 (Configuration / Reference / Time) */
     /* ============================================================ */
     .retro-header-native {
         background-color: #e0e0e0;
@@ -105,6 +78,7 @@ st.markdown("""
         line-height: 1.2;
     }
     
+    /* 增加容器内部元素的左右边距，防止贴边 */
     div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] {
         padding-left: 10px;
         padding-right: 10px;
@@ -114,9 +88,15 @@ st.markdown("""
         padding-left: 10px;
         padding-right: 10px;
     }
+    
+    /* 特别针对 markdown 文本块增加 padding */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
 
     /* ============================================================ */
-    /* 6. 输入控件与滑块改造 */
+    /* 5. 输入控件与滑块改造 */
     /* ============================================================ */
     div[data-baseweb="select"] > div {
         border: 1px solid #000000 !important;
@@ -132,7 +112,7 @@ st.markdown("""
 
     div[data-testid="stSliderTickBar"],
     div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
-        display: none !important;
+        display: none !important; 
     }
     .stSlider > div > div > div > div {
         height: 6px !important;
@@ -151,7 +131,7 @@ st.markdown("""
     .stSlider > div > div > div > div > div { background-color: #666666 !important; }
 
     /* ============================================================ */
-    /* 7. 指标卡片 */
+    /* 6. 指标卡片 */
     /* ============================================================ */
     .metric-container {
         display: flex;
@@ -174,7 +154,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 8. 按钮样式 */
+    /* 7. 按钮样式 */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -206,7 +186,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 数据逻辑 (已修复语法错误) ---
+# --- 3. 数据逻辑 ---
 @st.cache_data(ttl=3600)
 def get_data_and_calc(ticker):
     try:
@@ -217,7 +197,6 @@ def get_data_and_calc(ticker):
 
         if isinstance(df.columns, pd.MultiIndex):
             if'Close' in df.columns.get_level_values(0):
-                # 修复后的代码：正确提取 Close 列
                 df = df.xs('Close', axis=1, level=0, drop_level=True)
             else:
                  df.columns = df.columns.droplevel(1)
@@ -275,7 +254,7 @@ def get_data_and_calc(ticker):
 
 # --- 4. 页面布局 ---
 
-# Web 1.0 风格标题
+# 
 st.markdown("""
 <div style="
     text-align: center;
@@ -291,7 +270,7 @@ st.markdown("""
         Statistical Deviation Monitor
     </h1>
     <div style="font-family: 'Times New Roman'; font-size: 0.9rem; margin-top: 5px;">
-        SYSTEM STATUS: ONLINE 
+        SYSTEM STATUS: ONLINE
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -313,12 +292,15 @@ with col_l:
             st.cache_data.clear()
             st.rerun()
 
-# 右侧：指南
+# 右侧：指南 (修改点：回归原生 st.container，与其他模块保持一致)
 with col_r:
-    st.markdown("""
-    <div class="retro-custom-box">
-        <div class="retro-custom-header">REFERENCE GUIDE</div>
-        <div class="retro-custom-content">
+    with st.container(border=True):
+        # 使用和左侧一样的 Header 样式
+        st.markdown('<div class="retro-header-native">REFERENCE GUIDE</div>', unsafe_allow_html=True)
+        
+        # 内容区域
+        st.markdown("""
+        <div style="padding-bottom: 10px;">
             <div style="margin-bottom: 10px; display: flex; align-items: center;">
                 <span style="display:inline-block; width:12px; height:12px; background-color:#28a745; border:1px solid black; margin-right:10px;"></span>
                 <span><b>L-Line (0.45):</b> Lower statistical bound. Historical buy zone.</span>
@@ -332,8 +314,7 @@ with col_r:
                 <span><b>H-Line (4.00):</b> Upper statistical bound. Variance warning.</span>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
 # 时间选择器
 min_date = datetime(2009, 1, 3).date()
@@ -386,7 +367,7 @@ with st.spinner("Processing data..."):
             ahr = last['AHR999'] if'AHR999' in last else 0
             price = last['Close']
             
-            # [核心修复] 使用 class 类名，而不是 hex 颜色码
+            # 使用 class 类名，而不是 hex 颜色码
             if ahr < 0.45:
                 state = "ZONE L (Undershoot)"
                 css_class = "retro-color-green"
@@ -404,7 +385,7 @@ with st.spinner("Processing data..."):
                 css_class = "retro-color-red"
                 color_hex = "#dc3545"
 
-            # [核心修复] 在 HTML 中引用 class，并确保 text-gray 也是 class
+            # 指标卡片
             st.markdown(f"""
             <div class="metric-container">
                 <div class="metric-item">
@@ -467,7 +448,7 @@ with st.spinner("Processing data..."):
             
             st.markdown(f"""
             <div style="background-color: #f0f0f0;
-                padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
+            padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
                 <b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} | <b>MODE:</b> {note}
             </div>
             """, unsafe_allow_html=True)
