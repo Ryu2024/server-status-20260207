@@ -10,7 +10,7 @@ from plotly.subplots import make_subplots
 # --- 1. 页面配置 ---
 st.set_page_config(page_title="Data Dashboard", layout="wide")
 
-# --- 2. 样式设置
+# --- 2. 样式设置 ---
 st.markdown("""
 <style>
     /* ============================================================ */
@@ -27,7 +27,6 @@ st.markdown("""
         color: #000000 !important;
     }
     
-    /* 隐藏 Plotly 工具栏 */
     .modebar { display: none !important; }
 
     /* ============================================================ */
@@ -60,8 +59,9 @@ st.markdown("""
         line-height: 1.2;
     }
     
+    /* [修改点]：增加了底部 padding (20px)，解决文字贴边问题 */
     .retro-content-pad {
-        padding: 0px 10px;
+        padding: 0px 10px 20px 10px !important; 
     }
 
     /* ============================================================ */
@@ -78,7 +78,6 @@ st.markdown("""
         border-radius: 0px !important;
     }
     
-    /* 让 Selectbox 下方间距变小，从而拉近与下方按钮的距离 */
     div[data-testid="stSelectbox"] {
         margin-bottom: 5px !important;
     }
@@ -131,13 +130,12 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 7. 按钮样式 (针对性修改：更小、更薄、更紧凑) */
+    /* 7. 按钮样式 (紧凑版) */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
     .stButton {
-        /* 移除外层容器可能的额外边距 */
         margin-top: 0px !important;
     }
 
@@ -148,15 +146,12 @@ st.markdown("""
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
-        
-        /* --- 核心修改开始 --- */
-        height: auto !important;           /* 允许高度自适应 */
-        min-height: 32px !important;       /* 强制最小高度减小 (原默认约 38px) */
-        padding-top: 4px !important;       /* 减少内部上下边距 */
+        height: auto !important;
+        min-height: 32px !important;
+        padding-top: 4px !important;
         padding-bottom: 4px !important;
-        font-size: 0.85rem !important;     /* 字体稍微调小，显得精致 */
+        font-size: 0.85rem !important;
         line-height: 1.2 !important;
-        /* --- 核心修改结束 --- */
     }
     
     .stButton>button:active {
@@ -164,7 +159,6 @@ st.markdown("""
         transform: translate(1px, 1px);
     }
     
-    /* 悬停效果，稍微变白一点表示可点击 */
     .stButton>button:hover {
         background-color: #eaeaea !important;
         border-color: #000 !important;
@@ -173,11 +167,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 数据逻辑 (保持不变) ---
+# --- 3. 数据逻辑 ---
 @st.cache_data(ttl=3600)
 def get_data_and_calc(ticker):
     try:
-        # 下载数据
         df = yf.download(ticker, period="max", interval="1d", progress=False)
         
         if df.empty:
@@ -245,10 +238,9 @@ def get_data_and_calc(ticker):
 st.title("Statistical Deviation Monitor")
 st.markdown("---")
 
-# 4.1 顶部配置
 col_l, col_r = st.columns([1, 2], gap="large")
 
-# 左侧：配置 (已移除多余的 spacer，使布局更紧凑)
+# 左侧：配置
 with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header">CONFIGURATION</div>', unsafe_allow_html=True)
@@ -258,9 +250,6 @@ with col_l:
             options=["BTC-USD", "ETH-USD"],
             index=0
         )
-        
-        # --- 修改点：移除了 st.markdown("<div style='height: 10px'>... ---
-        # 直接放置按钮，配合 CSS 的 padding 调整，距离会非常合适
         
         if st.button("RELOAD DATASET", use_container_width=True):
             st.cache_data.clear()
@@ -287,10 +276,9 @@ with col_r:
         </div>
         """, unsafe_allow_html=True)
 
-# 4.2 时间选择器
+# 时间选择器 (默认为过去一年)
 min_date = datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
-
 one_year_ago = max_date - timedelta(days=365)
 default_start = one_year_ago
 default_end = max_date
