@@ -62,6 +62,7 @@ st.markdown("""
         display: flex !important;
         flex-direction: column !important;
     }
+    /* 让 Column 内部的黑框容器自动填充剩余高度 */
     div[data-testid="column"] > div > div > div > div[data-testid="stVerticalBlockBorderWrapper"] {
         flex-grow: 1 !important;
         display: flex !important;
@@ -72,7 +73,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 4. [调整点] 原生容器内的标题样式 */
+    /* 4. 原生容器内的标题样式 */
     /* ============================================================ */
     .retro-header-native {
         background-color: #e0e0e0;
@@ -83,8 +84,7 @@ st.markdown("""
         margin-top: 0px !important;
         margin-left: 0px !important;
         margin-right: 0px !important;
-        
-        /* [修改点]：增加标题下方的间距，由 5px 改为 15px */
+        /* [间距 A]：标题下方间距设为 15px */
         margin-bottom: 15px !important;
         
         width: 100% !important;
@@ -96,7 +96,6 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* 容器内边距 */
     div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] {
         padding-left: 10px; padding-right: 10px;
     }
@@ -105,72 +104,80 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 5. [调整点] Selectbox 间距优化 */
+    /* 5. [核心] 组件高度与间距统一化 */
     /* ============================================================ */
+    
+    /* --- Selectbox --- */
     div[data-baseweb="select"] > div {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
         background-color: #ffffff !important;
         box-shadow: none !important;
+        /* [高度 A]：强制锁定为 32px */
         min-height: 32px !important;
+        height: 32px !important;
+        /* 内部文字垂直居中 */
+        display: flex;
+        align-items: center;
     }
     div[data-baseweb="popover"] > div, div[data-baseweb="menu"] {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
     }
     
-    /* [修改点]：针对 Selectbox 容器的间距控制 */
     div[data-testid="stSelectbox"] { 
         margin-top: 0px !important;
-        
-        /* [修改点]：增加 Selectbox 下方的间距，由 5px 改为 15px */
-        /* 这样 上下间距都统一为 15px */
+        /* [间距 B]：选择框下方间距设为 15px (与标题下方一致) */
         margin-bottom: 15px !important;
     }
-    
+    /* 隐藏 Label */
     div[data-testid="stSelectbox"] label {
         display: none !important;
     }
 
-    /* ============================================================ */
-    /* 6. 按钮样式 */
-    /* ============================================================ */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    .stButton {
+    /* --- Button --- */
+    div.stButton {
         margin-top: 0px !important;
         width: 100%;
-        padding-bottom: 10px !important;
+        /* 移除底部多余留白 */
+        padding-bottom: 0px !important;
     }
 
-    .stButton>button {
+    .stButton > button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
         background-color: #e0e0e0 !important;
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
-        height: auto !important;
-        min-height: 22px !important;
-        padding-top: 3px !important;
-        padding-bottom: 3px !important;
-        font-size: 0.75rem !important; 
-        line-height: 1.1 !important;
+        
+        /* [高度 B]：强制锁定为 32px，与 Selectbox 完全一致 */
+        height: 32px !important;
+        min-height: 32px !important;
+        
+        /* 移除 Padding 确保高度计算准确 */
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+        
+        /* 字体调整 */
+        font-size: 0.8rem !important; 
+        line-height: 1 !important;
         letter-spacing: 0.05em;
     }
     
-    .stButton>button:active {
+    .stButton > button:active {
         box-shadow: none !important;
         transform: translate(1px, 1px);
     }
-    .stButton>button:hover {
+    .stButton > button:hover {
         background-color: #eaeaea !important;
         border-color: #000 !important;
         color: #000 !important;
     }
 
-    /* 其他组件样式 (Slider, Metric) */
+    /* ============================================================ */
+    /* 6. 其他组件 (Slider, Metrics) */
+    /* ============================================================ */
     div[data-testid="stSliderTickBar"],
     div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
@@ -295,19 +302,19 @@ st.markdown("""
     </h1>
     <div style="font-family: 'Times New Roman';
         font-size: 0.9rem; margin-top: 5px;">
-        SYSTEM STATUS: ONLINE 
+        SYSTEM STATUS: ONLINE
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 col_l, col_r = st.columns([1, 2], gap="large")
 
-# 左侧：配置 (高度将自动拉伸以对齐右侧)
+# 左侧：配置 (使用 Flexbox 自动拉伸高度)
 with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
         
-        # Selectbox: 文字隐藏，上下间距统一为 15px
+        # 1. Selectbox: 隐藏文字，高度由 CSS 强制为 32px
         ticker = st.selectbox(
             "Target Asset", 
             options=["BTC-USD", "ETH-USD"],
@@ -315,12 +322,12 @@ with col_l:
             label_visibility="collapsed"
         )
         
-        # Button: 样式紧凑
+        # 2. Button: 高度由 CSS 强制为 32px，与上方 Selectbox 等高，且间距一致
         if st.button("RELOAD DATASET", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
 
-# 右侧：指南
+# 右侧：指南 (使用 st.container 保持一致性)
 with col_r:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">REFERENCE GUIDE</div>', unsafe_allow_html=True)
