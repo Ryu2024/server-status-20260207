@@ -77,6 +77,11 @@ st.markdown("""
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
     }
+    
+    /* 让 Selectbox 下方间距变小，从而拉近与下方按钮的距离 */
+    div[data-testid="stSelectbox"] {
+        margin-bottom: 5px !important;
+    }
 
     /* ============================================================ */
     /* 5. 时间滑块改造 */
@@ -126,10 +131,16 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 7. 按钮与杂项 */
+    /* 7. 按钮样式 (针对性修改：更小、更薄、更紧凑) */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    .stButton {
+        /* 移除外层容器可能的额外边距 */
+        margin-top: 0px !important;
+    }
+
     .stButton>button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
@@ -137,15 +148,32 @@ st.markdown("""
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
+        
+        /* --- 核心修改开始 --- */
+        height: auto !important;           /* 允许高度自适应 */
+        min-height: 32px !important;       /* 强制最小高度减小 (原默认约 38px) */
+        padding-top: 4px !important;       /* 减少内部上下边距 */
+        padding-bottom: 4px !important;
+        font-size: 0.85rem !important;     /* 字体稍微调小，显得精致 */
+        line-height: 1.2 !important;
+        /* --- 核心修改结束 --- */
     }
+    
     .stButton>button:active {
         box-shadow: none !important;
         transform: translate(1px, 1px);
     }
+    
+    /* 悬停效果，稍微变白一点表示可点击 */
+    .stButton>button:hover {
+        background-color: #eaeaea !important;
+        border-color: #000 !important;
+        color: #000 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 数据逻辑 (保持高防御性) ---
+# --- 3. 数据逻辑 (保持不变) ---
 @st.cache_data(ttl=3600)
 def get_data_and_calc(ticker):
     try:
@@ -155,34 +183,26 @@ def get_data_and_calc(ticker):
         if df.empty:
             return pd.DataFrame(), "Error: No data returned from Yahoo Finance."
 
-        # 1. 清洗 MultiIndex (防御性逻辑)
         if isinstance(df.columns, pd.MultiIndex):
-            # 尝试获取 Level 0 为 Close 的列
             if'Close' in df.columns.get_level_values(0):
                  df = df.xs('Close', axis=1, level=0, drop_level=True)
             else:
-                 # 如果没有直接的 Close，尝试移除一层 Level
                  df.columns = df.columns.droplevel(1)
         
-        # 2. 确保只有 Close 列 (防御性逻辑)
         if'Close' not in df.columns:
             if len(df.columns) == 1:
-                # 如果只有一列，强制重命名
                 df.columns = ['Close']
             else:
-                # 尝试模糊匹配含有 'Close' 字样的列
                 close_cols = [c for c in df.columns if'Close' in str(c)]
                 if close_cols:
                     df = df[[close_cols[0]]].copy()
                     df.columns = ['Close']
         
-        # 3. 最终检查
         if'Close' not in df.columns:
              return pd.DataFrame(), f"Error: Could not find Close price. Columns: {df.columns.tolist()}"
              
         df = df[['Close']].copy().sort_index()
         
-        # 4. 时区与去重
         if df.index.tz is not None:
             df.index = df.index.tz_localize(None)
         
@@ -190,7 +210,6 @@ def get_data_and_calc(ticker):
         df = df.dropna()
         df = df[df['Close'] > 0]
         
-        # 5. 计算逻辑
         df['Log_Price'] = np.log(df['Close'])
         df['GeoMean'] = np.exp(df['Log_Price'].rolling(window=200).mean())
         
@@ -199,14 +218,12 @@ def get_data_and_calc(ticker):
         df = df[df['Days'] > 0]
         
         if ticker == "BTC-USD":
-            # BTC 固定参数
             slope = 5.84
             intercept = -17.01
             log_days = np.log10(df['Days'])
             df['Predicted'] = 10 ** (slope * log_days + intercept)
             note = "Method: Power Law (Fixed)"
         else:
-            # 其他币种 (ETH) 动态回归
             valid_data = df.dropna()
             if len(valid_data) > 0:
                 x = np.log10(valid_data['Days'].values)
@@ -231,19 +248,19 @@ st.markdown("---")
 # 4.1 顶部配置
 col_l, col_r = st.columns([1, 2], gap="large")
 
-# 左侧：配置
+# 左侧：配置 (已移除多余的 spacer，使布局更紧凑)
 with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header">CONFIGURATION</div>', unsafe_allow_html=True)
         
-        # 修改：只保留 BTC 和 ETH
         ticker = st.selectbox(
             "Target Asset", 
             options=["BTC-USD", "ETH-USD"],
             index=0
         )
         
-        st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
+        # --- 修改点：移除了 st.markdown("<div style='height: 10px'>... ---
+        # 直接放置按钮，配合 CSS 的 padding 调整，距离会非常合适
         
         if st.button("RELOAD DATASET", use_container_width=True):
             st.cache_data.clear()
@@ -270,16 +287,14 @@ with col_r:
         </div>
         """, unsafe_allow_html=True)
 
-# 4.2 时间选择器 (修改：默认为过去一年)
+# 4.2 时间选择器
 min_date = datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
 
-# 计算一年前的日期
 one_year_ago = max_date - timedelta(days=365)
 default_start = one_year_ago
 default_end = max_date
 
-# 使用 ticker 作为 key 的一部分，确保切换币种时滑块状态独立
 slider_key = f"slider_{ticker}"
 if slider_key not in st.session_state:
     st.session_state[slider_key] = (default_start, default_end)
@@ -287,7 +302,6 @@ if slider_key not in st.session_state:
 with st.container(border=True):
     st.markdown('<div class="retro-header">TIME RANGE SLICER</div>', unsafe_allow_html=True)
     
-    # 左右日期显示
     c_start, c_end = st.columns([1, 1])
     current_val = st.session_state[slider_key]
     
@@ -322,7 +336,6 @@ with st.spinner("Processing data..."):
             ahr = last['AHR999'] if'AHR999' in last else 0
             price = last['Close']
             
-            # 状态颜色逻辑
             if ahr < 0.45:
                 state = "ZONE L (Undershoot)"
                 color = "#28a745"
@@ -336,7 +349,6 @@ with st.spinner("Processing data..."):
                 state = "ZONE H (Overshoot)"
                 color = "#dc3545"
 
-            # 指标卡片
             st.markdown(f"""
             <div class="metric-container">
                 <div class="metric-item">
@@ -354,7 +366,6 @@ with st.spinner("Processing data..."):
             </div>
             """, unsafe_allow_html=True)
 
-            # 图表
             fig = make_subplots(
                 rows=2, cols=1, 
                 shared_xaxes=True, 
