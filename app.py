@@ -62,7 +62,6 @@ st.markdown("""
         display: flex !important;
         flex-direction: column !important;
     }
-    /* 让 Column 内部的黑框容器自动填充剩余高度 */
     div[data-testid="column"] > div > div > div > div[data-testid="stVerticalBlockBorderWrapper"] {
         flex-grow: 1 !important;
         display: flex !important;
@@ -85,8 +84,8 @@ st.markdown("""
         margin-left: 0px !important;
         margin-right: 0px !important;
         
-        /* [修改点]：将标题下方的间距由 10px 缩减为 5px，与下方对齐 */
-        margin-bottom: 5px !important;
+        /* [修改点]：增加标题下方的间距，由 5px 改为 15px */
+        margin-bottom: 15px !important;
         
         width: 100% !important;
         padding: 8px 0px;
@@ -122,25 +121,24 @@ st.markdown("""
     
     /* [修改点]：针对 Selectbox 容器的间距控制 */
     div[data-testid="stSelectbox"] { 
-        /* 强制去除顶部可能存在的间距 */
         margin-top: 0px !important;
-        /* 下方间距设为 5px，与 Header 下方间距保持完全一致 */
-        margin-bottom: 5px !important;
+        
+        /* [修改点]：增加 Selectbox 下方的间距，由 5px 改为 15px */
+        /* 这样 上下间距都统一为 15px */
+        margin-bottom: 15px !important;
     }
     
-    /* [修改点]：彻底隐藏 Label 元素，防止即使 collapsed 也占位 */
     div[data-testid="stSelectbox"] label {
         display: none !important;
     }
 
     /* ============================================================ */
-    /* 6. [调整点] 按钮样式 */
+    /* 6. 按钮样式 */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
     .stButton {
-        /* 确保按钮顶部紧贴上方的 Selectbox (由 Selectbox 的 margin-bottom: 5px 控制间距) */
         margin-top: 0px !important;
         width: 100%;
         padding-bottom: 10px !important;
@@ -297,7 +295,7 @@ st.markdown("""
     </h1>
     <div style="font-family: 'Times New Roman';
         font-size: 0.9rem; margin-top: 5px;">
-        SYSTEM STATUS: ONLINE
+        SYSTEM STATUS: ONLINE 
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -309,7 +307,7 @@ with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
         
-        # Selectbox: 文字隐藏，样式紧凑
+        # Selectbox: 文字隐藏，上下间距统一为 15px
         ticker = st.selectbox(
             "Target Asset", 
             options=["BTC-USD", "ETH-USD"],
