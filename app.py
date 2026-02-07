@@ -22,6 +22,7 @@ st.markdown("""
         color: #000000;
     }
     
+    /* 全局强制黑色，但在特定class下允许变色 */
     h1, h2, h3, label, p, div, span, li {
         font-family: 'Times New Roman', Times, serif !important;
         color: #000000 !important;
@@ -30,55 +31,43 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 容器样式 
+    /* 2. [核心修复] 专用颜色类 (权重必须极高以覆盖全局黑色) */
     /* ============================================================ */
-    div[data-testid="stVerticalBlockBorderWrapper"], div[data-testid="stVerticalBlockBorderWrapper"] > div {
+    .retro-color-green, .retro-color-green * { color: #28a745 !important; }
+    .retro-color-blue, .retro-color-blue * { color: #007bff !important; }
+    .retro-color-orange, .retro-color-orange * { color: #fd7e14 !important; }
+    .retro-color-red, .retro-color-red * { color: #dc3545 !important; }
+    .retro-color-gray, .retro-color-gray * { color: #666666 !important; }
+
+    /* ============================================================ */
+    /* 3. 容器与边框 (强制直角黑边) */
+    /* ============================================================ */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid #000000 !important;
         border-radius: 0px !important;
-        border-color: #000000 !important;
+        box-shadow: none !important;
+        background-color: #ffffff !important;
+        padding: 0px !important;
+        overflow: visible !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] > * {
+        border-radius: 0px !important;
     }
 
     /* ============================================================ */
-    /* 3. 自定义 HTML 盒子样式 (用于 Right Column) */
-    /* ============================================================ */
-    .retro-custom-box {
-        border: 1px solid #000000;
-        background-color: #ffffff;
-        padding: 0px;
-        margin-bottom: 20px;
-        /* 强制设置一个最小高度，方便左侧对齐 */
-        min-height: 160px;
-    }
-    
-    .retro-custom-header {
-        background-color: #e0e0e0;
-        color: #000000;
-        font-weight: bold;
-        text-transform: uppercase;
-        padding: 8px 0px;
-        border-bottom: 1px solid #000000;
-        font-size: 1rem;
-        letter-spacing: 0.05em;
-        text-align: center;
-        line-height: 1.2;
-    }
-    
-    .retro-custom-content {
-        padding: 15px 15px 20px 15px; 
-    }
-
-    /* ============================================================ */
-    /* 4. 左侧原生容器 Header 样式 */
+    /* 4. 原生容器内的标题样式 */
     /* ============================================================ */
     .retro-header-native {
         background-color: #e0e0e0;
         color: #000000 !important;
         font-weight: bold;
         text-transform: uppercase;
-        margin-top: -16px !important;
-        margin-left: -16px !important;
-        margin-right: -16px !important;
-        margin-bottom: 15px !important;
-        width: calc(100% + 32px) !important;
+        margin-top: 0px !important;
+        margin-left: 0px !important;
+        margin-right: 0px !important;
+        margin-bottom: 10px !important; /* 稍微减小标题下边距 */
+        width: 100% !important;
         padding: 8px 0px;
         border-bottom: 1px solid #000000;
         font-size: 1rem;
@@ -86,11 +75,41 @@ st.markdown("""
         text-align: center;
         line-height: 1.2;
     }
+    
+    /* 容器内部元素的左右内边距 */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] .stElementContainer {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
 
     /* ============================================================ */
     /* 5. 组件样式改造 */
     /* ============================================================ */
-    /* 隐藏滑块数值 */
+    /* Selectbox: 移除圆角，黑边 */
+    div[data-baseweb="select"] > div {
+        border: 1px solid #000000 !important;
+        border-radius: 0px !important;
+        background-color: #ffffff !important;
+        box-shadow: none !important;
+        min-height: 32px !important; /* 稍微压扁一点 */
+    }
+    div[data-baseweb="popover"] > div, div[data-baseweb="menu"] {
+        border: 1px solid #000000 !important;
+        border-radius: 0px !important;
+    }
+    div[data-testid="stSelectbox"] { 
+        margin-bottom: 10px !important; /* 增加 Selectbox 和下方按钮的间距 */
+    }
+
+    /* Slider: 隐藏数值 */
     div[data-testid="stSliderTickBar"],
     div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
@@ -127,11 +146,11 @@ st.markdown("""
     .metric-item:last-child { border-right: none; }
     .metric-value { 
         font-size: 1.6em; 
-        font-weight: bold; 
+        font-weight: bold;
     }
 
     /* ============================================================ */
-    /* 6. 按钮样式 (更小字体，更精致) */
+    /* 6. 按钮样式 (小巧精致版) */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -139,6 +158,7 @@ st.markdown("""
     .stButton {
         margin-top: 0px !important;
         width: 100%;
+        padding-bottom: 10px !important; /* 底部留白 */
     }
 
     .stButton>button {
@@ -149,13 +169,14 @@ st.markdown("""
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
         
-        /* [修改点]：字体更小，高度适应 */
+        /* [修改点]：更小的字体和更紧凑的高度 */
         height: auto !important;
-        min-height: 28px !important; /* 进一步减小最小高度 */
-        padding-top: 2px !important;
-        padding-bottom: 2px !important;
-        font-size: 0.75rem !important; /* [修改点]：字体改小 */
-        line-height: 1.2 !important;
+        min-height: 24px !important;
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+        font-size: 12px !important; /* 小字号 */
+        line-height: 1 !important;
+        letter-spacing: 0.05em;
     }
     
     .stButton>button:active {
@@ -181,7 +202,7 @@ def get_data_and_calc(ticker):
 
         if isinstance(df.columns, pd.MultiIndex):
             if'Close' in df.columns.get_level_values(0):
-                 df = df.xs('Close', axis=1, level=0, drop_level=True)
+                df = df.xs('Close', axis=1, level=0, drop_level=True)
             else:
                  df.columns = df.columns.droplevel(1)
         
@@ -213,12 +234,23 @@ def get_data_and_calc(ticker):
         df['Days'] = (df.index - genesis_date).days
         df = df[df['Days'] > 0]
         
-        # 默认 BTC 逻辑
-        slope = 5.84
-        intercept = -17.01
-        log_days = np.log10(df['Days'])
-        df['Predicted'] = 10 ** (slope * log_days + intercept)
-        note = "Method: Power Law (Fixed)"
+        if ticker == "BTC-USD":
+            slope = 5.84
+            intercept = -17.01
+            log_days = np.log10(df['Days'])
+            df['Predicted'] = 10 ** (slope * log_days + intercept)
+            note = "Method: Power Law (Fixed)"
+        else:
+            valid_data = df.dropna()
+            if len(valid_data) > 0:
+                x = np.log10(valid_data['Days'].values)
+                y = np.log10(valid_data['Close'].values)
+                slope, intercept, _, _, _ = linregress(x, y)
+                df['Predicted'] = 10 ** (intercept + slope * np.log10(df['Days']))
+                note = f"Method: Dynamic Reg (Beta {slope:.4f})"
+            else:
+                df['Predicted'] = np.nan
+                note = "Insufficient Data"
 
         df['AHR999'] = (df['Close'] / df['GeoMean']) * (df['Close'] / df['Predicted'])
         return df, note
@@ -227,34 +259,57 @@ def get_data_and_calc(ticker):
 
 # --- 4. 页面布局 ---
 
-st.title("Statistical Deviation Monitor")
-st.markdown("---")
+st.markdown("""
+<div style="
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #000; 
+    padding-bottom: 10px;">
+    <h1 style="
+        font-family: 'Courier New', Courier, monospace;
+        text-transform: uppercase; 
+        letter-spacing: 2px; 
+        font-size: 2.2rem; 
+        margin: 0;">
+        Statistical Deviation Monitor
+    </h1>
+    <div style="font-family: 'Times New Roman';
+        font-size: 0.9rem; margin-top: 5px;">
+        SYSTEM STATUS: ONLINE 
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 col_l, col_r = st.columns([1, 2], gap="large")
-
-# [修改点]：硬编码 Ticker，移除 Selectbox
-ticker = "BTC-USD"
 
 # 左侧：配置
 with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
         
-        # [修改点]：移除了 Ticker 选择框
-        # [修改点]：添加 Spacer 占位符，撑开高度以对齐右侧
-        # 右侧大约高 130px (Content) + Header，这里我们手动补齐高度差
-        st.markdown("<div style='height: 85px;'></div>", unsafe_allow_html=True)
+        # [修改点]：保留选择框，但隐藏 label
+        ticker = st.selectbox(
+            "Target Asset", # 这个Label不可省，但可以通过 visibility 隐藏
+            options=["BTC-USD", "ETH-USD"],
+            index=0,
+            label_visibility="collapsed" # 核心：隐藏标题文字
+        )
         
         if st.button("RELOAD DATASET", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
 
-# 右侧：指南 (纯 HTML 实现直角)
+        # [修改点]：强制撑开高度的占位符，为了与右侧底边对齐
+        # 右侧内容较多，左侧内容较少，计算差值后手动补齐
+        st.markdown("<div style='height: 38px;'></div>", unsafe_allow_html=True)
+
+# 右侧：指南
 with col_r:
-    st.markdown("""
-    <div class="retro-custom-box">
-        <div class="retro-custom-header">REFERENCE GUIDE</div>
-        <div class="retro-custom-content">
+    with st.container(border=True):
+        st.markdown('<div class="retro-header-native">REFERENCE GUIDE</div>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div style="padding-bottom: 10px;">
             <div style="margin-bottom: 10px; display: flex; align-items: center;">
                 <span style="display:inline-block; width:12px; height:12px; background-color:#28a745; border:1px solid black; margin-right:10px;"></span>
                 <span><b>L-Line (0.45):</b> Lower statistical bound. Historical buy zone.</span>
@@ -268,8 +323,7 @@ with col_r:
                 <span><b>H-Line (4.00):</b> Upper statistical bound. Variance warning.</span>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
 # 时间选择器
 min_date = datetime(2009, 1, 3).date()
@@ -289,10 +343,11 @@ with st.container(border=True):
     current_val = st.session_state[slider_key]
     
     with c_start:
-        st.markdown(f"<div style='padding-left:0px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='padding-left:10px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
     with c_end:
-        st.markdown(f"<div style='text-align: right; padding-right:0px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: right; padding-right:10px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
     
+    st.markdown("<div style='padding: 0px 10px;'>", unsafe_allow_html=True)
     start_date, end_date = st.slider(
         "Time Range",
         min_value=min_date,
@@ -302,6 +357,8 @@ with st.container(border=True):
         label_visibility="collapsed",
         key=slider_key
     )
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
 
 # --- 5. 核心分析展示 ---
 
@@ -319,32 +376,38 @@ with st.spinner("Processing data..."):
             ahr = last['AHR999'] if'AHR999' in last else 0
             price = last['Close']
             
+            # 使用 class 类名控制颜色
             if ahr < 0.45:
                 state = "ZONE L (Undershoot)"
-                color = "#28a745"
+                css_class = "retro-color-green"
+                color_hex = "#28a745"
             elif 0.45 <= ahr <= 1.2:
                 state = "ZONE M (Accumulation)"
-                color = "#007bff"
+                css_class = "retro-color-blue"
+                color_hex = "#007bff"
             elif 1.2 < ahr <= 4.0:
                 state = "ZONE N (Neutral)"
-                color = "#fd7e14"
+                css_class = "retro-color-orange"
+                color_hex = "#fd7e14"
             else:
                 state = "ZONE H (Overshoot)"
-                color = "#dc3545"
+                css_class = "retro-color-red"
+                color_hex = "#dc3545"
 
+            # 指标卡片
             st.markdown(f"""
             <div class="metric-container">
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666;">CURRENT VALUE</div>
+                    <div class="retro-color-gray" style="font-size:0.9em;">CURRENT VALUE</div>
                     <div class="metric-value">${price:,.2f}</div>
                 </div>
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666;">DEVIATION INDEX</div>
-                    <div class="metric-value" style="color: {color}">{ahr:.4f}</div>
+                    <div class="retro-color-gray" style="font-size:0.9em;">DEVIATION INDEX</div>
+                    <div class="metric-value {css_class}">{ahr:.4f}</div>
                 </div>
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666;">STATUS</div>
-                    <div class="metric-value" style="color: {color}">{state}</div>
+                    <div class="retro-color-gray" style="font-size:0.9em;">STATUS</div>
+                    <div class="metric-value {css_class}">{state}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -393,7 +456,8 @@ with st.spinner("Processing data..."):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
             
             st.markdown(f"""
-            <div style="background-color: #f0f0f0; padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
+            <div style="background-color: #f0f0f0;
+                padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
                 <b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} | <b>MODE:</b> {note}
             </div>
             """, unsafe_allow_html=True)
