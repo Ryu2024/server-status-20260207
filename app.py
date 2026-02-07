@@ -10,7 +10,7 @@ from plotly.subplots import make_subplots
 # --- 1. 页面配置 ---
 st.set_page_config(page_title="Data Dashboard", layout="wide")
 
-# --- 2. 样式设置 (终极瘦身版) ---
+# --- 2. 样式设置---
 st.markdown("""
 <style>
     /* ============================================================ */
@@ -91,15 +91,25 @@ st.markdown("""
     /* 4. [核心手术] 组件“抽脂”工程 */
     /* ============================================================ */
     
-    /* --- 通用：Selectbox 外层 --- */
+    /* --- Selectbox 外层 --- */
     div[data-testid="stSelectbox"] { 
         margin-top: 0px !important;
-        /* [间距] 保持与标题间距一致的 15px */
-        margin-bottom: 15px !important;
+        margin-bottom: 15px !important; /* 保持间距 */
     }
-    div[data-testid="stSelectbox"] label { display: none !important; }
 
-    /* --- 手术刀：BaseWeb Select 内部 --- */
+    /* [新增]：专门针对 Selectbox 的 Label 进行微型化处理 */
+    div[data-testid="stSelectbox"] label {
+        display: block !important; /* 恢复显示 */
+        font-size: 10px !important; /* 极小字体 */
+        font-family: 'Courier New', Courier, monospace !important; /* 使用等宽字体增加科技感 */
+        text-transform: uppercase !important;
+        font-weight: bold !important;
+        margin-bottom: 2px !important; /* 紧贴输入框 */
+        line-height: 1 !important;
+        letter-spacing: 0.05em !important;
+    }
+
+    /* --- BaseWeb Select 内部 --- */
     
     /* 1. 外框：锁定 28px */
     div[data-baseweb="select"] > div {
@@ -107,29 +117,33 @@ st.markdown("""
         border-radius: 0px !important;
         background-color: #ffffff !important;
         box-shadow: none !important;
-        /* 强制高度 28px */
         height: 28px !important;
         min-height: 28px !important;
         max-height: 28px !important;
-        /* 关键：去掉所有 Padding */
         padding: 0px !important;
         display: flex !important;
         align-items: center !important;
     }
     
-    /* 2. 内部文字容器：去掉 Padding，垂直居中 */
+    /* 2. 内部文字容器 */
     div[data-baseweb="select"] > div > div {
         padding-top: 0px !important;
         padding-bottom: 0px !important;
-        padding-left: 8px !important; /* 左侧留一点点空隙 */
+        padding-left: 8px !important;
         margin: 0px !important;
         height: 100% !important;
         display: flex !important;
         align-items: center !important;
-        line-height: 1 !important; /* 防止行高撑开 */
+        line-height: 1 !important;
     }
 
-    /* 3. 内部 SVG 图标容器：去掉 Padding */
+    /* [新增]：隐藏输入光标，模拟“禁止手动输入”的视觉效果 */
+    input[role="combobox"] {
+        caret-color: transparent !important; /* 光标透明 */
+        cursor: default !important; /* 鼠标变为默认箭头 */
+    }
+
+    /* 3. 图标 */
     div[data-baseweb="select"] > div > div:last-child {
         padding-right: 5px !important;
     }
@@ -140,12 +154,12 @@ st.markdown("""
         border-radius: 0px !important;
     }
 
-    /* --- 手术刀：Button 内部 --- */
+    /* --- Button --- */
     
     div.stButton {
         margin-top: 0px !important;
         width: 100%;
-        padding-bottom: 10px !important; /* 底部留白，防止贴底 */
+        padding-bottom: 10px !important;
     }
 
     .stButton > button {
@@ -155,19 +169,12 @@ st.markdown("""
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
-        
-        /* 强制高度 28px (与 Selectbox 严格一致) */
         height: 28px !important;
         min-height: 28px !important;
-        
-        /* 关键：去掉 Padding，防止撑大 */
         padding: 0px !important;
-        
-        /* 字体垂直居中 */
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        
         font-size: 0.75rem !important;
         letter-spacing: 0.05em;
     }
@@ -248,8 +255,8 @@ col_l, col_r = st.columns([1, 2], gap="large")
 with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
-        # Selectbox
-        ticker = st.selectbox("Target Asset", options=["BTC-USD", "ETH-USD"], index=0, label_visibility="collapsed")
+        # Selectbox (去掉了 hidden 属性，恢复默认，但通过CSS控制样式)
+        ticker = st.selectbox("Target Asset", options=["BTC-USD", "ETH-USD"], index=0)
         # Button
         if st.button("RELOAD DATASET", use_container_width=True):
             st.cache_data.clear()
