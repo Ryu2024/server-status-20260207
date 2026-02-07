@@ -293,7 +293,30 @@ with st.spinner("Processing data..."):
             fig.add_hline(y=1.2, line_color="blue", line_dash="dot", row=2, col=1)
             fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
 
-            fig.update_layout(height=700, template="plotly_white", font=dict(family="Times New Roman", size=14, color="#000"), margin=dict(l=40, r=40, t=50, b=80), plot_bgcolor="white", paper_bgcolor="white", legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center", bgcolor="rgba(255,255,255,0.8)", bordercolor="black", borderwidth=1))
+            fig.update_layout(
+                height=700,
+                template="plotly_white",
+                font=dict(family="Times New Roman", size=14, color="#000"),
+                # 1. 调整边距 (Margin)
+                # l=Left (左边距): 从 40 改为 65，防止 Y 轴的大额数字（如 $60,000）被切掉
+                # t=Top (顶边距): 从 50 改为 80，防止“Asset Value”标题顶到上边框
+                # b=Bottom (底边距): 从 80 改为 120，给底部的图例留出足够空间
+                margin=dict(l=65, r=40, t=80, b=120),
+                
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                
+                # 2. 调整图例位置
+                legend=dict(
+                    orientation="h",
+                    y=-0.2,            # 将图例向下移动（从 -0.15 改为 -0.2），防止遮挡 X 轴日期
+                    x=0.5,
+                    xanchor="center",
+                    bgcolor="rgba(255,255,255,0.8)",
+                    bordercolor="black",
+                    borderwidth=1
+                )
+            )
             fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, rangeslider=dict(visible=False))
             fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
 
