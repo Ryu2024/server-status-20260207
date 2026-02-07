@@ -3,14 +3,14 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from scipy.stats import linregress
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 # --- 1. 页面配置 ---
 st.set_page_config(page_title="Data Dashboard", layout="wide")
 
-# --- 2. 样式设置  ---
+# --- 2. 样式设置
 st.markdown("""
 <style>
     /* ============================================================ */
@@ -22,44 +22,35 @@ st.markdown("""
         color: #000000;
     }
     
-    h1, h2, h3, label {
+    h1, h2, h3, label, p, div, span, li {
         font-family: 'Times New Roman', Times, serif !important;
         color: #000000 !important;
-    }
-    
-    p, div, span, li {
-        font-family: 'Times New Roman', Times, serif !important;
     }
     
     /* 隐藏 Plotly 工具栏 */
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 容器样式 
+    /* 2. 容器样式 (1px 黑边，无圆角) */
     /* ============================================================ */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
         background-color: #ffffff;
-        /* 保留默认 padding，用下方 header 的负边距来贴边 */
     }
 
     /* ============================================================ */
-    /* 3. 标题栏样式
+    /* 3. 标题栏样式 */
     /* ============================================================ */
     .retro-header {
         background-color: #e0e0e0;
         color: #000000 !important;
         font-weight: bold;
         text-transform: uppercase;
-        
-        /* [核心魔法]：抵消 Streamlit 容器默认的内边距，让标题贴边 */
         margin-top: -16px !important;
         margin-left: -16px !important;
         margin-right: -16px !important;
         margin-bottom: 15px !important;
-        
-        /* 重新计算宽度，确保盖住左右 */
         width: calc(100% + 32px) !important;
         padding: 8px 0px;
         border-bottom: 1px solid #000000;
@@ -74,22 +65,13 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 4. 输入控件改造 (1px 细黑边) */
+    /* 4. 输入控件改造 */
     /* ============================================================ */
     div[data-baseweb="select"] > div {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
         background-color: #ffffff !important;
         box-shadow: none !important;
-        min-height: 38px;
-        cursor: pointer !important;
-    }
-    div[data-baseweb="select"] input {
-        caret-color: transparent !important;
-        cursor: pointer !important;
-    }
-    div[data-baseweb="select"] svg {
-        fill: #000000 !important;
     }
     div[data-baseweb="popover"] > div, div[data-baseweb="menu"] {
         border: 1px solid #000000 !important;
@@ -99,20 +81,16 @@ st.markdown("""
     /* ============================================================ */
     /* 5. 时间滑块改造 */
     /* ============================================================ */
-    /* 隐藏滑块自带数值 */
     div[data-testid="stSliderTickBar"],
     div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
     }
-
     .stSlider > div > div > div > div {
         height: 6px !important;
         background-color: #c0c0c0 !important;
         border: 1px solid #808080 !important;
         border-radius: 0px !important;
     }
-    
-    /* 方形手柄 */
     [data-testid="stSliderThumb"] {
         height: 18px !important;
         width: 18px !important;
@@ -121,15 +99,12 @@ st.markdown("""
         border: 1px solid #ffffff !important;
         top: -6px !important;
     }
-    [data-testid="stSliderThumb"]:focus { 
-        box-shadow: none !important;
-    }
     .stSlider > div > div > div > div > div {
          background-color: #666666 !important;
     }
 
     /* ============================================================ */
-    /* 6. 指标卡片 (1px 细黑框) */
+    /* 6. 指标卡片 */
     /* ============================================================ */
     .metric-container {
         display: flex;
@@ -155,7 +130,6 @@ st.markdown("""
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    
     .stButton>button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
@@ -163,24 +137,15 @@ st.markdown("""
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
-        min-height: 38px !important; 
-        padding-top: 0px !important;
-        padding-bottom: 0px !important;
     }
     .stButton>button:active {
         box-shadow: none !important;
         transform: translate(1px, 1px);
     }
-    
-    div[data-testid="stWidgetLabel"] p {
-        font-size: 0.9rem !important;
-        font-weight: bold !important;
-        color: #333 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 数据逻辑 (完全修复版) ---
+# --- 3. 数据逻辑 (保持高防御性) ---
 @st.cache_data(ttl=3600)
 def get_data_and_calc(ticker):
     try:
@@ -190,30 +155,34 @@ def get_data_and_calc(ticker):
         if df.empty:
             return pd.DataFrame(), "Error: No data returned from Yahoo Finance."
 
-        # 清洗 MultiIndex
+        # 1. 清洗 MultiIndex (防御性逻辑)
         if isinstance(df.columns, pd.MultiIndex):
+            # 尝试获取 Level 0 为 Close 的列
             if'Close' in df.columns.get_level_values(0):
                  df = df.xs('Close', axis=1, level=0, drop_level=True)
             else:
+                 # 如果没有直接的 Close，尝试移除一层 Level
                  df.columns = df.columns.droplevel(1)
         
-        # 确保只有 Close 列
+        # 2. 确保只有 Close 列 (防御性逻辑)
         if'Close' not in df.columns:
             if len(df.columns) == 1:
+                # 如果只有一列，强制重命名
                 df.columns = ['Close']
             else:
-                # 尝试模糊匹配 Close
+                # 尝试模糊匹配含有 'Close' 字样的列
                 close_cols = [c for c in df.columns if'Close' in str(c)]
                 if close_cols:
                     df = df[[close_cols[0]]].copy()
                     df.columns = ['Close']
         
-        # 最终检查 (这里是之前报错的地方，现在已修复)
+        # 3. 最终检查
         if'Close' not in df.columns:
              return pd.DataFrame(), f"Error: Could not find Close price. Columns: {df.columns.tolist()}"
              
         df = df[['Close']].copy().sort_index()
         
+        # 4. 时区与去重
         if df.index.tz is not None:
             df.index = df.index.tz_localize(None)
         
@@ -221,6 +190,7 @@ def get_data_and_calc(ticker):
         df = df.dropna()
         df = df[df['Close'] > 0]
         
+        # 5. 计算逻辑
         df['Log_Price'] = np.log(df['Close'])
         df['GeoMean'] = np.exp(df['Log_Price'].rolling(window=200).mean())
         
@@ -229,12 +199,14 @@ def get_data_and_calc(ticker):
         df = df[df['Days'] > 0]
         
         if ticker == "BTC-USD":
+            # BTC 固定参数
             slope = 5.84
             intercept = -17.01
             log_days = np.log10(df['Days'])
             df['Predicted'] = 10 ** (slope * log_days + intercept)
             note = "Method: Power Law (Fixed)"
         else:
+            # 其他币种 (ETH) 动态回归
             valid_data = df.dropna()
             if len(valid_data) > 0:
                 x = np.log10(valid_data['Days'].values)
@@ -259,14 +231,15 @@ st.markdown("---")
 # 4.1 顶部配置
 col_l, col_r = st.columns([1, 2], gap="large")
 
-# 左侧：配置 (使用 border=True + 负边距 CSS)
+# 左侧：配置
 with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header">CONFIGURATION</div>', unsafe_allow_html=True)
         
+        # 修改：只保留 BTC 和 ETH
         ticker = st.selectbox(
             "Target Asset", 
-            options=["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD"],
+            options=["BTC-USD", "ETH-USD"],
             index=0
         )
         
@@ -297,12 +270,16 @@ with col_r:
         </div>
         """, unsafe_allow_html=True)
 
-# 4.2 时间选择器
+# 4.2 时间选择器 (修改：默认为过去一年)
 min_date = datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
-default_start = datetime(2020, 1, 1).date()
+
+# 计算一年前的日期
+one_year_ago = max_date - timedelta(days=365)
+default_start = one_year_ago
 default_end = max_date
 
+# 使用 ticker 作为 key 的一部分，确保切换币种时滑块状态独立
 slider_key = f"slider_{ticker}"
 if slider_key not in st.session_state:
     st.session_state[slider_key] = (default_start, default_end)
@@ -313,13 +290,11 @@ with st.container(border=True):
     # 左右日期显示
     c_start, c_end = st.columns([1, 1])
     current_val = st.session_state[slider_key]
-    start_str = current_val[0].strftime("%Y/%m/%d")
-    end_str = current_val[1].strftime("%Y/%m/%d")
     
     with c_start:
-        st.markdown(f"<div style='padding-left:0px;'><b>{start_str}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='padding-left:0px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
     with c_end:
-        st.markdown(f"<div style='text-align: right; padding-right:0px;'><b>{end_str}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: right; padding-right:0px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
     
     start_date, end_date = st.slider(
         "Time Range",
@@ -397,16 +372,13 @@ with st.spinner("Processing data..."):
             fig.add_hline(y=1.2, line_color="blue", line_dash="dot", row=2, col=1)
             fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
 
-            # --- 关键修改：调整边距和图例位置 ---
             fig.update_layout(
                 height=700,
                 template="plotly_white",
                 font=dict(family="Times New Roman", size=14, color="#000"),
-                # t=50: 防止标题顶到边框; b=80: 给底部图例留出空间
                 margin=dict(l=40, r=40, t=50, b=80), 
                 plot_bgcolor="white",
                 paper_bgcolor="white",
-                # 图例移至最下方，避免覆盖图表或标题
                 legend=dict(
                     orientation="h", 
                     y=-0.15, 
@@ -424,7 +396,6 @@ with st.spinner("Processing data..."):
             )
             fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
 
-            # 纯净图表 (已移除外框 div)
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
             
             st.markdown(f"""
