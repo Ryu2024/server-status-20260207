@@ -322,7 +322,7 @@ with st.spinner("Processing data..."):
 
         
             # 强制所有子图的标题文字大幅度向上移动，从而彻底与边框线分离。
-            fig.update_annotations(yshift=50)  
+            fig.update_annotations(yshift=30)  
             fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, rangeslider=dict(visible=False))
             fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
 
