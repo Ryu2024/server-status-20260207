@@ -31,7 +31,7 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. [核心修复] 专用颜色类 (权重必须极高以覆盖全局黑色) */
+    /* 2. [核心修复] 专用颜色类 (覆盖全局黑色) */
     /* ============================================================ */
     .retro-color-green, .retro-color-green * { color: #28a745 !important; }
     .retro-color-blue, .retro-color-blue * { color: #007bff !important; }
@@ -40,9 +40,10 @@ st.markdown("""
     .retro-color-gray, .retro-color-gray * { color: #666666 !important; }
 
     /* ============================================================ */
-    /* 3. 容器与边框 (统一控制所有 st.container) */
+    /* 3. 容器与边框 (统一控制) + [自动高度对齐修复] */
     /* ============================================================ */
-    /* 强制所有原生容器变为直角黑边，确保左右风格完全一致 */
+    
+    /* 1. 强制所有容器为直角黑边 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
@@ -51,9 +52,34 @@ st.markdown("""
         padding: 0px !important;
         overflow: visible !important;
     }
-
     div[data-testid="stVerticalBlockBorderWrapper"] > * {
         border-radius: 0px !important;
+    }
+
+    /* 2. [关键 CSS]：强制左右两列高度一致 (Flexbox Stretch) */
+    
+    /* 让水平布局块 (Row) 的子元素自动拉伸对齐 */
+    div[data-testid="stHorizontalBlock"] {
+        align-items: stretch !important;
+    }
+    
+    /* 让列 (Column) 变为 Flex 容器，且方向垂直 */
+    div[data-testid="column"] {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    /* 让列里面的 Border Wrapper (我们的框) 自动填充剩余高度 */
+    /* 只针对位于 Column 内部的 Border Wrapper 生效，不影响 Time Range */
+    div[data-testid="column"] > div > div > div > div[data-testid="stVerticalBlockBorderWrapper"] {
+        flex-grow: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    /* 让 Wrapper 内部的内容块也延展，确保背景色铺满 */
+    div[data-testid="column"] div[data-testid="stVerticalBlock"] {
+        flex-grow: 1 !important;
     }
 
     /* ============================================================ */
@@ -67,7 +93,7 @@ st.markdown("""
         margin-top: 0px !important;
         margin-left: 0px !important;
         margin-right: 0px !important;
-        margin-bottom: 10px !important;
+        margin-bottom: 15px !important;
         width: 100% !important;
         padding: 8px 0px;
         border-bottom: 1px solid #000000;
@@ -77,24 +103,19 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* 容器内部元素的左右内边距 */
     div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] {
-        padding-left: 10px;
-        padding-right: 10px;
+        padding-left: 10px; padding-right: 10px;
     }
     div[data-testid="stVerticalBlockBorderWrapper"] .stElementContainer {
-        padding-left: 10px;
-        padding-right: 10px;
+        padding-left: 10px; padding-right: 10px;
     }
     div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stMarkdownContainer"] {
-        padding-left: 5px;
-        padding-right: 5px;
+        padding-left: 5px; padding-right: 5px;
     }
 
     /* ============================================================ */
     /* 5. 组件样式改造 */
     /* ============================================================ */
-    /* Selectbox */
     div[data-baseweb="select"] > div {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
@@ -110,7 +131,6 @@ st.markdown("""
         margin-bottom: 10px !important;
     }
 
-    /* Slider */
     div[data-testid="stSliderTickBar"],
     div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
@@ -130,7 +150,6 @@ st.markdown("""
         top: -6px !important;
     }
     
-    /* 指标卡片 */
     .metric-container {
         display: flex;
         justify-content: space-between;
@@ -151,7 +170,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 6. 按钮样式 (精致小巧版) */
+    /* 6. 按钮样式 (精致微型版) */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -159,7 +178,7 @@ st.markdown("""
     .stButton {
         margin-top: 0px !important;
         width: 100%;
-        padding-bottom: 5px !important; /* 减少底部留白，因为后面有spacer */
+        padding-bottom: 10px !important;
     }
 
     .stButton>button {
@@ -169,13 +188,13 @@ st.markdown("""
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
-        /* 精致小巧设置 */
+        /* [修改点]：超小字体，超紧凑 */
         height: auto !important;
-        min-height: 24px !important;
-        padding-top: 4px !important;
-        padding-bottom: 4px !important;
-        font-size: 12px !important;
-        line-height: 1 !important;
+        min-height: 22px !important;
+        padding-top: 3px !important;
+        padding-bottom: 3px !important;
+        font-size: 0.75rem !important; /* 约 12px */
+        line-height: 1.1 !important;
         letter-spacing: 0.05em;
     }
     
@@ -202,7 +221,7 @@ def get_data_and_calc(ticker):
 
         if isinstance(df.columns, pd.MultiIndex):
             if'Close' in df.columns.get_level_values(0):
-                 df = df.xs('Close', axis=1, level=0, drop_level=True)
+                df = df.xs('Close', axis=1, level=0, drop_level=True)
             else:
                  df.columns = df.columns.droplevel(1)
         
@@ -287,7 +306,7 @@ with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
         
-        # 1. 保留选择框，但隐藏标题
+        # [修改点]：保留选择框，但隐藏标题 (label_visibility="collapsed")
         ticker = st.selectbox(
             "Target Asset", 
             options=["BTC-USD", "ETH-USD"],
@@ -295,17 +314,14 @@ with col_l:
             label_visibility="collapsed"
         )
         
-        # 2. 按钮 (样式已改小)
+        # [修改点]：按钮样式在 CSS 中已调整为更小
         if st.button("RELOAD DATASET", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
             
-        # 3. 底部对齐垫片
-        # 计算逻辑：右侧内容约占 130px，左侧 selectbox(42)+button(30)+gaps 约占 80px
-        # 需要补足高度差，使底部边框对齐
-        st.markdown("<div style='height: 48px;'></div>", unsafe_allow_html=True)
+        # [修改点]：移除了手动高度垫片，完全依赖 CSS 自动对齐
 
-# 右侧：指南 (彻底改回 st.container 以保持一致性)
+# 右侧：指南
 with col_r:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">REFERENCE GUIDE</div>', unsafe_allow_html=True)
@@ -459,7 +475,7 @@ with st.spinner("Processing data..."):
             
             st.markdown(f"""
             <div style="background-color: #f0f0f0;
-            padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
+                padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
                 <b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} | <b>MODE:</b> {note}
             </div>
             """, unsafe_allow_html=True)
