@@ -22,7 +22,7 @@ st.markdown("""
         color: #000000;
     }
     
-    /* 这里的 !important 导致了颜色失效，我们将在行内样式中覆盖它 */
+    /* 全局强制黑色  */
     h1, h2, h3, label, p, div, span, li {
         font-family: 'Times New Roman', Times, serif !important;
         color: #000000 !important;
@@ -31,7 +31,18 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. [核心修复] 强制覆盖 st.container(border=True) 样式 */
+    /* 2. [核心修复] 专用颜色类 (权重必须极高) */
+    /* ============================================================ */
+    /* 使用 * 通配符，强制覆盖 div 内部可能存在的 p 或 span 标签 */
+    
+    .retro-color-green, .retro-color-green * { color: #28a745 !important; }
+    .retro-color-blue, .retro-color-blue * { color: #007bff !important; }
+    .retro-color-orange, .retro-color-orange * { color: #fd7e14 !important; }
+    .retro-color-red, .retro-color-red * { color: #dc3545 !important; }
+    .retro-color-gray, .retro-color-gray * { color: #666666 !important; }
+
+    /* ============================================================ */
+    /* 3. 容器与边框修复 */
     /* ============================================================ */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #000000 !important;
@@ -47,7 +58,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 3. 自定义 HTML 盒子样式 (用于 Reference Guide) */
+    /* 4. 自定义 HTML 盒子样式 */
     /* ============================================================ */
     .retro-custom-box {
         border: 1px solid #000000;
@@ -74,7 +85,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 4. 原生容器内的标题样式 (Configuration / Time) */
+    /* 5. 原生容器内的标题样式 */
     /* ============================================================ */
     .retro-header-native {
         background-color: #e0e0e0;
@@ -105,7 +116,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 5. 输入控件与滑块改造 */
+    /* 6. 输入控件与滑块改造 */
     /* ============================================================ */
     div[data-baseweb="select"] > div {
         border: 1px solid #000000 !important;
@@ -137,12 +148,10 @@ st.markdown("""
         border: 1px solid #ffffff !important;
         top: -6px !important;
     }
-    .stSlider > div > div > div > div > div {
-         background-color: #666666 !important;
-    }
+    .stSlider > div > div > div > div > div { background-color: #666666 !important; }
 
     /* ============================================================ */
-    /* 6. 指标卡片 */
+    /* 7. 指标卡片 */
     /* ============================================================ */
     .metric-container {
         display: flex;
@@ -158,20 +167,19 @@ st.markdown("""
         border-right: 1px solid #ccc;
     }
     .metric-item:last-child { border-right: none; }
+    
     .metric-value { 
         font-size: 1.6em;
         font-weight: bold;
     }
 
     /* ============================================================ */
-    /* 7. 按钮样式 */
+    /* 8. 按钮样式 */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    .stButton { 
-        padding-bottom: 15px !important;
-    }
+    .stButton { padding-bottom: 15px !important; }
     .stButton>button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
@@ -198,7 +206,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 数据逻辑 ---
+# --- 3. 数据逻辑 (已修复语法错误) ---
 @st.cache_data(ttl=3600)
 def get_data_and_calc(ticker):
     try:
@@ -209,6 +217,7 @@ def get_data_and_calc(ticker):
 
         if isinstance(df.columns, pd.MultiIndex):
             if'Close' in df.columns.get_level_values(0):
+                # 修复后的代码：正确提取 Close 列
                 df = df.xs('Close', axis=1, level=0, drop_level=True)
             else:
                  df.columns = df.columns.droplevel(1)
@@ -348,7 +357,6 @@ with st.container(border=True):
     with c_end:
         st.markdown(f"<div style='text-align: right; padding-right:10px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
     
-    # 稍微调整滑块容器的 padding
     st.markdown("<div style='padding: 0px 10px;'>", unsafe_allow_html=True)
     start_date, end_date = st.slider(
         "Time Range",
@@ -360,8 +368,6 @@ with st.container(border=True):
         key=slider_key
     )
     st.markdown("</div>", unsafe_allow_html=True)
-    
-    # 底部稍微留空，防止滑块贴底
     st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
 
 # --- 5. 核心分析展示 ---
@@ -380,33 +386,38 @@ with st.spinner("Processing data..."):
             ahr = last['AHR999'] if'AHR999' in last else 0
             price = last['Close']
             
+            # [核心修复] 使用 class 类名，而不是 hex 颜色码
             if ahr < 0.45:
                 state = "ZONE L (Undershoot)"
-                color = "#28a745"
+                css_class = "retro-color-green"
+                color_hex = "#28a745" # 用于 Plotly
             elif 0.45 <= ahr <= 1.2:
                 state = "ZONE M (Accumulation)"
-                color = "#007bff"
+                css_class = "retro-color-blue"
+                color_hex = "#007bff"
             elif 1.2 < ahr <= 4.0:
                 state = "ZONE N (Neutral)"
-                color = "#fd7e14"
+                css_class = "retro-color-orange"
+                color_hex = "#fd7e14"
             else:
                 state = "ZONE H (Overshoot)"
-                color = "#dc3545"
+                css_class = "retro-color-red"
+                color_hex = "#dc3545"
 
-            # [修复点]：增加 !important 以强制覆盖全局黑色样式
+            # [核心修复] 在 HTML 中引用 class，并确保 text-gray 也是 class
             st.markdown(f"""
             <div class="metric-container">
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666 !important;">CURRENT VALUE</div>
+                    <div class="retro-color-gray" style="font-size:0.9em;">CURRENT VALUE</div>
                     <div class="metric-value">${price:,.2f}</div>
                 </div>
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666 !important;">DEVIATION INDEX</div>
-                    <div class="metric-value" style="color: {color} !important;">{ahr:.4f}</div>
+                    <div class="retro-color-gray" style="font-size:0.9em;">DEVIATION INDEX</div>
+                    <div class="metric-value {css_class}">{ahr:.4f}</div>
                 </div>
                 <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666 !important;">STATUS</div>
-                    <div class="metric-value" style="color: {color} !important;">{state}</div>
+                    <div class="retro-color-gray" style="font-size:0.9em;">STATUS</div>
+                    <div class="metric-value {css_class}">{state}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -455,7 +466,8 @@ with st.spinner("Processing data..."):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
             
             st.markdown(f"""
-            <div style="background-color: #f0f0f0; padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
+            <div style="background-color: #f0f0f0;
+                padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
                 <b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} | <b>MODE:</b> {note}
             </div>
             """, unsafe_allow_html=True)
