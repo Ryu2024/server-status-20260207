@@ -263,7 +263,7 @@ st.markdown("""
         Statistical Deviation Monitor
     </h1>
     <div style="font-family: 'Times New Roman'; font-size: 0.9rem; margin-top: 5px;">
-        SYSTEM STATUS: ONLINE | PROTOCOL: WEB 1.0
+        SYSTEM STATUS: ONLINE 
     </div>
 </div>
 """, unsafe_allow_html=True)
