@@ -30,50 +30,40 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. [核心修改] 暴力背景图边框法 (Background Image Border) */
+    /* 2. [终极方案] 伪元素覆盖法 (Pseudo-element Overlay) */
     /* ============================================================ */
-    /* 原理：不使用 border (容易被圆角)，而是用 background-image 
-       画出四条 1px 的黑线。背景图永远是直角的。
+    /* 策略：
+       1. 将原生容器的边框设为透明 (transparent)，但保留 1px 宽度以维持布局位置。
+       2. 使用 ::after 伪元素生成一个绝对定位的黑框覆盖在上面。
+       3. 伪元素不受父级 border-radius 影响，保证绝对直角。
     */
+    
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        /* 1. 关掉原生边框和圆角 */
-        border: none !important;
+        /* 隐藏原生边框颜色，但保留宽度占位 */
+        border: 1px solid transparent !important;
         border-radius: 0px !important;
+        /* 关键：设置为相对定位，作为伪元素的定位基准 */
+        position: relative !important;
         box-shadow: none !important;
-        
-        /* 2. 使用线性渐变画出四条黑线 */
-        background-image: 
-            linear-gradient(#000, #000), /* 上边框 */
-            linear-gradient(#000, #000), /* 下边框 */
-            linear-gradient(#000, #000), /* 左边框 */
-            linear-gradient(#000, #000); /* 右边框 */
-        
-        /* 3. 设置不做平铺 */
-        background-repeat: no-repeat;
-        
-        /* 4. 定义四条线的大小 (1px 粗细) */
-        background-size: 
-            100% 1px, /* 上：全宽，1px高 */
-            100% 1px, /* 下：全宽，1px高 */
-            1px 100%, /* 左：1px宽，全高 */
-            1px 100%; /* 右：1px宽，全高 */
-            
-        /* 5. 定位四条线 */
-        background-position: 
-            top left,    /* 上 */
-            bottom left, /* 下 */
-            top left,    /* 左 */
-            top right;   /* 右 */
-            
         background-color: #ffffff;
-        
-        /* 6. 微调内边距，防止内容压住边框线 */
-        padding: 1px !important;
     }
     
-    /* 确保内部容器也是直角 */
-    div[data-testid="stVerticalBlockBorderWrapper"] > div {
+    /* 创建一个新的直角黑框 */
+    div[data-testid="stVerticalBlockBorderWrapper"]::after {
+        content: "" !important;
+        position: absolute !important;
+        /* 覆盖在透明边框之上 (-1px 表示向外延伸覆盖住原本的 border 位置) */
+        top: -1px !important;
+        left: -1px !important;
+        right: -1px !important;
+        bottom: -1px !important;
+        /* 强制直角黑边 */
+        border: 1px solid #000000 !important;
         border-radius: 0px !important;
+        /* 关键：让鼠标点击穿透这个层，否则里面的按钮点不动 */
+        pointer-events: none !important;
+        /* 确保显示在最上层 */
+        z-index: 10 !important;
     }
 
     /* ============================================================ */
@@ -84,6 +74,7 @@ st.markdown("""
         background-color: #ffffff;
         padding: 0px; 
         margin-bottom: 20px;
+        position: relative;
     }
 
     .retro-custom-header {
@@ -100,7 +91,7 @@ st.markdown("""
     }
     
     .retro-custom-content {
-        padding: 15px 15px 20px 15px; /* 底部留白优化 */
+        padding: 15px 15px 20px 15px;
     }
 
     /* ============================================================ */
@@ -111,12 +102,10 @@ st.markdown("""
         color: #000000 !important;
         font-weight: bold;
         text-transform: uppercase;
-        /* 抵消 st.container 默认 padding */
         margin-top: -16px !important;
         margin-left: -16px !important;
         margin-right: -16px !important;
         margin-bottom: 15px !important;
-        /* 宽度计算：恢复 100% + 左右 padding */
         width: calc(100% + 32px) !important;
         padding: 8px 0px;
         border-bottom: 1px solid #000000;
@@ -288,7 +277,7 @@ st.markdown("---")
 
 col_l, col_r = st.columns([1, 2], gap="large")
 
-# 左侧：配置 (使用原生 Container 但已被 CSS 魔改边框)
+# 左侧：配置 (Native st.container with CSS hack)
 with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
@@ -303,7 +292,7 @@ with col_l:
             st.cache_data.clear()
             st.rerun()
 
-# 右侧：指南 (保持纯 HTML 渲染)
+# 右侧：指南 (HTML Render)
 with col_r:
     st.markdown("""
     <div class="retro-custom-box">
