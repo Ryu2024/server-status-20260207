@@ -30,12 +30,19 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 容器样式 (1px 黑边，无圆角) */
+    /* 2. 容器样式 (核心修改：强制直角) */
     /* ============================================================ */
+    /* 针对 st.container(border=True) 的外层包装器 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        border: 1px solid #000000 !important;
-        border-radius: 0px !important;
+        border: 1px solid #000000 !important; /* 强制黑色实线边框 */
+        border-radius: 0px !important;       /* 核心：强制 0px 圆角 */
         background-color: #ffffff;
+        box-shadow: none !important;         /* 移除任何阴影 */
+    }
+    
+    /* 确保内部元素也不会意外产生圆角 */
+    div[data-testid="stVerticalBlockBorderWrapper"] > div {
+        border-radius: 0px !important;
     }
 
     /* ============================================================ */
@@ -59,7 +66,6 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* [修改点]：增加了底部 padding (20px)，解决文字贴边问题 */
     .retro-content-pad {
         padding: 0px 10px 20px 10px !important; 
     }
@@ -130,7 +136,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 7. 按钮样式 (紧凑版) */
+    /* 7. 按钮样式 */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -276,7 +282,7 @@ with col_r:
         </div>
         """, unsafe_allow_html=True)
 
-# 时间选择器 (默认为过去一年)
+# 时间选择器
 min_date = datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
 one_year_ago = max_date - timedelta(days=365)
