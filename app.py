@@ -214,7 +214,7 @@ with st.container(border=True):
             st.rerun()
             
     with c_reload:
-        if st.button("RELOAD DATA", use_container_width=True):
+        if st.button("RELOAD", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
             
