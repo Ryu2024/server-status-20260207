@@ -294,22 +294,24 @@ with st.spinner("Processing data..."):
             fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
 
             fig.update_layout(
-                height=700,
+                # 1. 保持较大的总高度，确保图表本身不会变小
+                height=900,  
+                
                 template="plotly_white",
                 font=dict(family="Times New Roman", size=14, color="#000"),
-                # 1. 调整边距 (Margin)
-                # l=Left (左边距): 从 40 改为 65，防止 Y 轴的大额数字（如 $60,000）被切掉
-                # t=Top (顶边距): 从 50 改为 80，防止“Asset Value”标题顶到上边框
-                # b=Bottom (底边距): 从 80 改为 120，给底部的图例留出足够空间
-                margin=dict(l=65, r=40, t=80, b=120),
+                
+                # 2. 调整边距 (Margin)
+                # 关键是加大顶部边距 t (Top)。
+                # 我们把它设为 140，给标题向上移动预留出充足的“领空”，防止标题跑出画布。
+                margin=dict(l=60, r=40, t=140, b=100),
                 
                 plot_bgcolor="white",
                 paper_bgcolor="white",
                 
-                # 2. 调整图例位置
+                # 图例位置保持不变
                 legend=dict(
                     orientation="h",
-                    y=-0.2,            # 将图例向下移动（从 -0.15 改为 -0.2），防止遮挡 X 轴日期
+                    y=-0.1,
                     x=0.5,
                     xanchor="center",
                     bgcolor="rgba(255,255,255,0.8)",
@@ -317,6 +319,10 @@ with st.spinner("Processing data..."):
                     borderwidth=1
                 )
             )
+
+        
+            # 强制所有子图的标题文字大幅度向上移动，从而彻底与边框线分离。
+            fig.update_annotations(yshift=50)  
             fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, rangeslider=dict(visible=False))
             fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
 
