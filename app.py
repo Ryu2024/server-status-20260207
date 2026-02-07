@@ -40,8 +40,9 @@ st.markdown("""
     .retro-color-gray, .retro-color-gray * { color: #666666 !important; }
 
     /* ============================================================ */
-    /* 3. 容器与边框 (强制直角黑边) */
+    /* 3. 容器与边框 (统一控制所有 st.container) */
     /* ============================================================ */
+    /* 强制所有原生容器变为直角黑边，确保左右风格完全一致 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
@@ -66,7 +67,7 @@ st.markdown("""
         margin-top: 0px !important;
         margin-left: 0px !important;
         margin-right: 0px !important;
-        margin-bottom: 10px !important; /* 稍微减小标题下边距 */
+        margin-bottom: 10px !important;
         width: 100% !important;
         padding: 8px 0px;
         border-bottom: 1px solid #000000;
@@ -93,23 +94,23 @@ st.markdown("""
     /* ============================================================ */
     /* 5. 组件样式改造 */
     /* ============================================================ */
-    /* Selectbox: 移除圆角，黑边 */
+    /* Selectbox */
     div[data-baseweb="select"] > div {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
         background-color: #ffffff !important;
         box-shadow: none !important;
-        min-height: 32px !important; /* 稍微压扁一点 */
+        min-height: 32px !important;
     }
     div[data-baseweb="popover"] > div, div[data-baseweb="menu"] {
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
     }
     div[data-testid="stSelectbox"] { 
-        margin-bottom: 10px !important; /* 增加 Selectbox 和下方按钮的间距 */
+        margin-bottom: 10px !important;
     }
 
-    /* Slider: 隐藏数值 */
+    /* Slider */
     div[data-testid="stSliderTickBar"],
     div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
@@ -150,7 +151,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 6. 按钮样式 (小巧精致版) */
+    /* 6. 按钮样式 (精致小巧版) */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -158,7 +159,7 @@ st.markdown("""
     .stButton {
         margin-top: 0px !important;
         width: 100%;
-        padding-bottom: 10px !important; /* 底部留白 */
+        padding-bottom: 5px !important; /* 减少底部留白，因为后面有spacer */
     }
 
     .stButton>button {
@@ -168,13 +169,12 @@ st.markdown("""
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
-        
-        /* [修改点]：更小的字体和更紧凑的高度 */
+        /* 精致小巧设置 */
         height: auto !important;
         min-height: 24px !important;
         padding-top: 4px !important;
         padding-bottom: 4px !important;
-        font-size: 12px !important; /* 小字号 */
+        font-size: 12px !important;
         line-height: 1 !important;
         letter-spacing: 0.05em;
     }
@@ -202,7 +202,7 @@ def get_data_and_calc(ticker):
 
         if isinstance(df.columns, pd.MultiIndex):
             if'Close' in df.columns.get_level_values(0):
-                df = df.xs('Close', axis=1, level=0, drop_level=True)
+                 df = df.xs('Close', axis=1, level=0, drop_level=True)
             else:
                  df.columns = df.columns.droplevel(1)
         
@@ -275,7 +275,7 @@ st.markdown("""
     </h1>
     <div style="font-family: 'Times New Roman';
         font-size: 0.9rem; margin-top: 5px;">
-        SYSTEM STATUS: ONLINE 
+        SYSTEM STATUS: ONLINE
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -287,23 +287,25 @@ with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
         
-        # [修改点]：保留选择框，但隐藏 label
+        # 1. 保留选择框，但隐藏标题
         ticker = st.selectbox(
-            "Target Asset", # 这个Label不可省，但可以通过 visibility 隐藏
+            "Target Asset", 
             options=["BTC-USD", "ETH-USD"],
             index=0,
-            label_visibility="collapsed" # 核心：隐藏标题文字
+            label_visibility="collapsed"
         )
         
+        # 2. 按钮 (样式已改小)
         if st.button("RELOAD DATASET", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
+            
+        # 3. 底部对齐垫片
+        # 计算逻辑：右侧内容约占 130px，左侧 selectbox(42)+button(30)+gaps 约占 80px
+        # 需要补足高度差，使底部边框对齐
+        st.markdown("<div style='height: 48px;'></div>", unsafe_allow_html=True)
 
-        # [修改点]：强制撑开高度的占位符，为了与右侧底边对齐
-        # 右侧内容较多，左侧内容较少，计算差值后手动补齐
-        st.markdown("<div style='height: 38px;'></div>", unsafe_allow_html=True)
-
-# 右侧：指南
+# 右侧：指南 (彻底改回 st.container 以保持一致性)
 with col_r:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">REFERENCE GUIDE</div>', unsafe_allow_html=True)
@@ -457,12 +459,13 @@ with st.spinner("Processing data..."):
             
             st.markdown(f"""
             <div style="background-color: #f0f0f0;
-                padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
+            padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
                 <b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} | <b>MODE:</b> {note}
             </div>
             """, unsafe_allow_html=True)
             
         else:
              st.warning("No data in selected range.")
+    
     else:
         st.error(f"Unable to fetch data. Error details: {note}")
