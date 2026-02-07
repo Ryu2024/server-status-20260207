@@ -30,13 +30,50 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 暴力修复 Streamlit 原生容器圆角 (针对 Configuration/Time) */
+    /* 2. [核心修改] 暴力背景图边框法 (Background Image Border) */
     /* ============================================================ */
-    /* 强制定位到 Streamlit 边框容器的底层并消除圆角 */
-    div[data-testid="stVerticalBlockBorderWrapper"], 
+    /* 原理：不使用 border (容易被圆角)，而是用 background-image 
+       画出四条 1px 的黑线。背景图永远是直角的。
+    */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        /* 1. 关掉原生边框和圆角 */
+        border: none !important;
+        border-radius: 0px !important;
+        box-shadow: none !important;
+        
+        /* 2. 使用线性渐变画出四条黑线 */
+        background-image: 
+            linear-gradient(#000, #000), /* 上边框 */
+            linear-gradient(#000, #000), /* 下边框 */
+            linear-gradient(#000, #000), /* 左边框 */
+            linear-gradient(#000, #000); /* 右边框 */
+        
+        /* 3. 设置不做平铺 */
+        background-repeat: no-repeat;
+        
+        /* 4. 定义四条线的大小 (1px 粗细) */
+        background-size: 
+            100% 1px, /* 上：全宽，1px高 */
+            100% 1px, /* 下：全宽，1px高 */
+            1px 100%, /* 左：1px宽，全高 */
+            1px 100%; /* 右：1px宽，全高 */
+            
+        /* 5. 定位四条线 */
+        background-position: 
+            top left,    /* 上 */
+            bottom left, /* 下 */
+            top left,    /* 左 */
+            top right;   /* 右 */
+            
+        background-color: #ffffff;
+        
+        /* 6. 微调内边距，防止内容压住边框线 */
+        padding: 1px !important;
+    }
+    
+    /* 确保内部容器也是直角 */
     div[data-testid="stVerticalBlockBorderWrapper"] > div {
         border-radius: 0px !important;
-        border-color: #000000 !important;
     }
 
     /* ============================================================ */
@@ -45,7 +82,7 @@ st.markdown("""
     .retro-custom-box {
         border: 1px solid #000000;
         background-color: #ffffff;
-        padding: 0px; /* 内部无内边距，让 Header 贴边 */
+        padding: 0px; 
         margin-bottom: 20px;
     }
 
@@ -63,13 +100,12 @@ st.markdown("""
     }
     
     .retro-custom-content {
-        padding: 15px 15px 20px 15px; /* 上左右下 */
+        padding: 15px 15px 20px 15px; /* 底部留白优化 */
     }
 
     /* ============================================================ */
     /* 4. 原生容器内的标题样式 (Configuration / Time) */
     /* ============================================================ */
-    /* 这里的样式为了配合 st.container(border=True) 的负边距 */
     .retro-header-native {
         background-color: #e0e0e0;
         color: #000000 !important;
@@ -80,6 +116,7 @@ st.markdown("""
         margin-left: -16px !important;
         margin-right: -16px !important;
         margin-bottom: 15px !important;
+        /* 宽度计算：恢复 100% + 左右 padding */
         width: calc(100% + 32px) !important;
         padding: 8px 0px;
         border-bottom: 1px solid #000000;
@@ -147,7 +184,7 @@ st.markdown("""
     }
 
     /* ============================================================ */
-    /* 7. 按钮样式 */
+    /* 7. 按钮样式 (紧凑版) */
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -251,7 +288,7 @@ st.markdown("---")
 
 col_l, col_r = st.columns([1, 2], gap="large")
 
-# 左侧：配置 (保持 st.container 以容纳交互组件，但CSS已增强)
+# 左侧：配置 (使用原生 Container 但已被 CSS 魔改边框)
 with col_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
@@ -266,10 +303,8 @@ with col_l:
             st.cache_data.clear()
             st.rerun()
 
-# 右侧：指南 (关键修改：完全移除 st.container，改用纯 HTML 渲染)
+# 右侧：指南 (保持纯 HTML 渲染)
 with col_r:
-    # 这里我们不用 st.container(border=True) 了，直接画一个 HTML 盒子
-    # 这就是你想要的 "Use a background (custom) div instead"
     st.markdown("""
     <div class="retro-custom-box">
         <div class="retro-custom-header">REFERENCE GUIDE</div>
