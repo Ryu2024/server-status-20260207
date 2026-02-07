@@ -30,29 +30,52 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 容器样式 (核心修改：强制直角) */
+    /* 2. 暴力修复 Streamlit 原生容器圆角 (针对 Configuration/Time) */
     /* ============================================================ */
-    /* 针对 st.container(border=True) 的外层包装器 */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        border: 1px solid #000000 !important; /* 强制黑色实线边框 */
-        border-radius: 0px !important;       /* 核心：强制 0px 圆角 */
-        background-color: #ffffff;
-        box-shadow: none !important;         /* 移除任何阴影 */
-    }
-    
-    /* 确保内部元素也不会意外产生圆角 */
+    /* 强制定位到 Streamlit 边框容器的底层并消除圆角 */
+    div[data-testid="stVerticalBlockBorderWrapper"], 
     div[data-testid="stVerticalBlockBorderWrapper"] > div {
         border-radius: 0px !important;
+        border-color: #000000 !important;
     }
 
     /* ============================================================ */
-    /* 3. 标题栏样式 */
+    /* 3. 自定义 HTML 盒子样式 (用于 Reference Guide) */
     /* ============================================================ */
-    .retro-header {
+    .retro-custom-box {
+        border: 1px solid #000000;
+        background-color: #ffffff;
+        padding: 0px; /* 内部无内边距，让 Header 贴边 */
+        margin-bottom: 20px;
+    }
+
+    .retro-custom-header {
+        background-color: #e0e0e0;
+        color: #000000;
+        font-weight: bold;
+        text-transform: uppercase;
+        padding: 8px 0px;
+        border-bottom: 1px solid #000000;
+        font-size: 1rem;
+        letter-spacing: 0.05em;
+        text-align: center;
+        line-height: 1.2;
+    }
+    
+    .retro-custom-content {
+        padding: 15px 15px 20px 15px; /* 上左右下 */
+    }
+
+    /* ============================================================ */
+    /* 4. 原生容器内的标题样式 (Configuration / Time) */
+    /* ============================================================ */
+    /* 这里的样式为了配合 st.container(border=True) 的负边距 */
+    .retro-header-native {
         background-color: #e0e0e0;
         color: #000000 !important;
         font-weight: bold;
         text-transform: uppercase;
+        /* 抵消 st.container 默认 padding */
         margin-top: -16px !important;
         margin-left: -16px !important;
         margin-right: -16px !important;
@@ -65,13 +88,9 @@ st.markdown("""
         text-align: center;
         line-height: 1.2;
     }
-    
-    .retro-content-pad {
-        padding: 0px 10px 20px 10px !important; 
-    }
 
     /* ============================================================ */
-    /* 4. 输入控件改造 */
+    /* 5. 输入控件与滑块改造 */
     /* ============================================================ */
     div[data-baseweb="select"] > div {
         border: 1px solid #000000 !important;
@@ -83,14 +102,8 @@ st.markdown("""
         border: 1px solid #000000 !important;
         border-radius: 0px !important;
     }
-    
-    div[data-testid="stSelectbox"] {
-        margin-bottom: 5px !important;
-    }
+    div[data-testid="stSelectbox"] { margin-bottom: 5px !important; }
 
-    /* ============================================================ */
-    /* 5. 时间滑块改造 */
-    /* ============================================================ */
     div[data-testid="stSliderTickBar"],
     div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p {
         display: none !important;
@@ -109,9 +122,7 @@ st.markdown("""
         border: 1px solid #ffffff !important;
         top: -6px !important;
     }
-    .stSlider > div > div > div > div > div {
-         background-color: #666666 !important;
-    }
+    .stSlider > div > div > div > div > div { background-color: #666666 !important; }
 
     /* ============================================================ */
     /* 6. 指标卡片 */
@@ -140,11 +151,7 @@ st.markdown("""
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    
-    .stButton {
-        margin-top: 0px !important;
-    }
-
+    .stButton { margin-top: 0px !important; }
     .stButton>button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
@@ -159,12 +166,10 @@ st.markdown("""
         font-size: 0.85rem !important;
         line-height: 1.2 !important;
     }
-    
     .stButton>button:active {
         box-shadow: none !important;
         transform: translate(1px, 1px);
     }
-    
     .stButton>button:hover {
         background-color: #eaeaea !important;
         border-color: #000 !important;
@@ -246,10 +251,10 @@ st.markdown("---")
 
 col_l, col_r = st.columns([1, 2], gap="large")
 
-# 左侧：配置
+# 左侧：配置 (保持 st.container 以容纳交互组件，但CSS已增强)
 with col_l:
     with st.container(border=True):
-        st.markdown('<div class="retro-header">CONFIGURATION</div>', unsafe_allow_html=True)
+        st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
         
         ticker = st.selectbox(
             "Target Asset", 
@@ -261,12 +266,14 @@ with col_l:
             st.cache_data.clear()
             st.rerun()
 
-# 右侧：指南
+# 右侧：指南 (关键修改：完全移除 st.container，改用纯 HTML 渲染)
 with col_r:
-    with st.container(border=True):
-        st.markdown('<div class="retro-header">REFERENCE GUIDE</div>', unsafe_allow_html=True)
-        st.markdown("""
-        <div class="retro-content-pad" style="font-size: 0.95rem;">
+    # 这里我们不用 st.container(border=True) 了，直接画一个 HTML 盒子
+    # 这就是你想要的 "Use a background (custom) div instead"
+    st.markdown("""
+    <div class="retro-custom-box">
+        <div class="retro-custom-header">REFERENCE GUIDE</div>
+        <div class="retro-custom-content">
             <div style="margin-bottom: 10px; display: flex; align-items: center;">
                 <span style="display:inline-block; width:12px; height:12px; background-color:#28a745; border:1px solid black; margin-right:10px;"></span>
                 <span><b>L-Line (0.45):</b> Lower statistical bound. Historical buy zone.</span>
@@ -280,7 +287,8 @@ with col_r:
                 <span><b>H-Line (4.00):</b> Upper statistical bound. Variance warning.</span>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
 # 时间选择器
 min_date = datetime(2009, 1, 3).date()
@@ -294,7 +302,7 @@ if slider_key not in st.session_state:
     st.session_state[slider_key] = (default_start, default_end)
 
 with st.container(border=True):
-    st.markdown('<div class="retro-header">TIME RANGE SLICER</div>', unsafe_allow_html=True)
+    st.markdown('<div class="retro-header-native">TIME RANGE SLICER</div>', unsafe_allow_html=True)
     
     c_start, c_end = st.columns([1, 1])
     current_val = st.session_state[slider_key]
