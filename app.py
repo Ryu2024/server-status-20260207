@@ -18,30 +18,13 @@ if'ticker' not in st.session_state:
 st.markdown("""
 <style>
     /* ============================================================ */
-    /* 1. 全局基础与布局优化 */
+    /* 1. 全局基础 */
     /* ============================================================ */
     .stApp {
         background-color: #ffffff;
         font-family: 'Times New Roman', Times, serif;
         color: #000000;
     }
-    
-    /* 限制页面主容器的最大宽度，保持紧凑 */
-    div[data-testid="block-container"] {
-        max-width: 1200px;
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        margin: 0 auto;
-    }
-
-    /* [核心修改]：图表容器强制拉宽 */
-    /* 宽度设为 106% 并向左偏移 3%，让图表比上面的文字栏更宽，视觉上对齐边框 */
-    div[data-testid="stPlotlyChart"] {
-        width: 106% !important;
-        margin-left: -3% !important;
-        max-width: 106% !important;
-    }
-
     h1, h2, h3, label, p, div, span, li {
         font-family: 'Times New Roman', Times, serif !important;
         color: #000000 !important;
@@ -49,7 +32,7 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 颜色定义 */
+    /* 2. 颜色定义 (覆盖全局黑色) */
     /* ============================================================ */
     .retro-color-green, .retro-color-green * { color: #28a745 !important; }
     .retro-color-blue, .retro-color-blue * { color: #007bff !important; }
@@ -83,13 +66,20 @@ st.markdown("""
     .stButton > button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
-        background-color: #ffffff !important;
+        background-color: #ffffff !important; /* 默认白底 */
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
+        
+        /* 强制高度 32px */
         height: 32px !important;
         min-height: 32px !important;
         padding: 0px !important;
+        
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        
         font-size: 0.85rem !important;
         letter-spacing: 0.05em;
         font-family: 'Courier New', Courier, monospace !important;
@@ -101,26 +91,54 @@ st.markdown("""
         color: #000 !important;
     }
     
+    .stButton > button:active {
+        box-shadow: none !important;
+        transform: translate(1px, 1px);
+    }
+
     /* ============================================================ */
     /* 5. 辅助样式 */
     /* ============================================================ */
+    /* 去掉 Slider 刻度 */
     div[data-testid="stSliderTickBar"], div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p { display: none !important; }
     .stSlider > div > div > div > div { height: 6px !important; background-color: #c0c0c0 !important; border: 1px solid #808080 !important; border-radius: 0px !important; }
     [data-testid="stSliderThumb"] { height: 18px !important; width: 18px !important; border-radius: 0px !important; background-color: #000000 !important; border: 1px solid #ffffff !important; top: -6px !important; }
     
+    /* 指标卡片 */
     .metric-container { display: flex; justify-content: space-between; background-color: #f9f9f9; padding: 15px; border: 1px solid #000000; margin-bottom: 20px; }
     .metric-item { text-align: center; width: 33%; border-right: 1px solid #ccc; }
     .metric-item:last-child { border-right: none; }
     .metric-value { font-size: 1.6em; font-weight: bold; }
+    
+    /* 图例文字 */
     .legend-text { font-size: 0.85rem !important; margin-right: 15px !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 4. 动态 CSS 注入 (用于按钮高亮) ---
+# 根据当前选中的 ticker，动态注入 CSS 让对应的按钮变黑（反色）
 if st.session_state.ticker == "BTC-USD":
-    st.markdown("""<style>div[data-testid="column"]:nth-of-type(1) div.stButton > button { background-color: #000000 !important; color: #ffffff !important; box-shadow: none !important; }</style>""", unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+        /* 第一个 Column (BTC) 的按钮变黑 */
+        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 elif st.session_state.ticker == "ETH-USD":
-    st.markdown("""<style>div[data-testid="column"]:nth-of-type(2) div.stButton > button { background-color: #000000 !important; color: #ffffff !important; box-shadow: none !important; }</style>""", unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+        /* 第二个 Column (ETH) 的按钮变黑 */
+        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 
 # --- 5. 数据逻辑 ---
@@ -167,6 +185,7 @@ def get_data_and_calc(ticker):
 
 # --- 6. 页面布局 ---
 
+# 标题区域
 st.markdown("""
 <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
     <h1 style="font-family: 'Courier New', Courier, monospace; text-transform: uppercase; letter-spacing: 2px; font-size: 2.2rem; margin: 0;">
@@ -178,14 +197,28 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# [核心改造]：整合工具栏 (Buttons + Legend)
+# 布局比例：[BTC] [ETH] [RELOAD] [Spacer] [Legend]
 with st.container(border=True):
+    # 使用 columns 来排布按钮和文字
     c_btc, c_eth, c_reload, c_spacer, c_legend = st.columns([0.8, 0.8, 1, 0.5, 4.5])
+    
     with c_btc:
-        if st.button("BTC", use_container_width=True): st.session_state.ticker = "BTC-USD"; st.rerun()
+        if st.button("BTC", use_container_width=True):
+            st.session_state.ticker = "BTC-USD"
+            st.rerun()
+            
     with c_eth:
-        if st.button("ETH", use_container_width=True): st.session_state.ticker = "ETH-USD"; st.rerun()
+        if st.button("ETH", use_container_width=True):
+            st.session_state.ticker = "ETH-USD"
+            st.rerun()
+            
     with c_reload:
-        if st.button("RELOAD", use_container_width=True): st.cache_data.clear(); st.rerun()
+        if st.button("RELOAD", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+            
+    # 右侧：横向排列的 Reference Guide
     with c_legend:
         st.markdown("""
         <div style="display: flex; align-items: center; justify-content: flex-end; height: 32px;">
@@ -204,11 +237,14 @@ with st.container(border=True):
         </div>
         """, unsafe_allow_html=True)
 
+# 时间选择器
 min_date = datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
 slider_key = f"slider_{st.session_state.ticker}"
-if slider_key not in st.session_state: st.session_state[slider_key] = (max_date - timedelta(days=365), max_date)
+if slider_key not in st.session_state:
+    st.session_state[slider_key] = (max_date - timedelta(days=365), max_date)
 
+# 稍微留一点间距
 st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
 
 with st.container(border=True):
@@ -258,15 +294,21 @@ with st.spinner("Processing data..."):
             fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
 
             fig.update_layout(
+                # 1. 保持较大的总高度，确保图表本身不会变小
                 height=900,  
+                
                 template="plotly_white",
                 font=dict(family="Times New Roman", size=14, color="#000"),
                 
-                # [核心修改]：减小左右 Margin (原 l=60, r=40)，让图表内容更宽
-                margin=dict(l=20, r=20, t=140, b=100),
+                # 2. 调整边距 (Margin)
+                # 关键是加大顶部边距 t (Top)。
+                # 我们把它设为 140，给标题向上移动预留出充足的“领空”，防止标题跑出画布。
+                margin=dict(l=60, r=40, t=140, b=100),
                 
                 plot_bgcolor="white",
                 paper_bgcolor="white",
+                
+                # 图例位置保持不变
                 legend=dict(
                     orientation="h",
                     y=-0.1,
@@ -278,7 +320,9 @@ with st.spinner("Processing data..."):
                 )
             )
 
-            fig.update_annotations(yshift=15)  
+        
+            # 强制所有子图的标题文字大幅度向上移动，从而彻底与边框线分离。
+            fig.update_annotations(yshift=13)  
             fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, rangeslider=dict(visible=False))
             fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
 
