@@ -283,6 +283,10 @@ with st.spinner("Calculating metrics..."):
             xaxis=dict(
                 rangeselector=dict(
                     buttons=list([
+                        dict(count=1, label="1D", step="day", stepmode="backward"),
+                        dict(count=3, label="3D", step="day", stepmode="backward"),
+                        dict(count=7, label="1W", step="day", stepmode="backward"),
+                        dict(count=14, label="2W", step="day", stepmode="backward"),
                         dict(count=1, label="1M", step="month", stepmode="backward"),
                         dict(count=3, label="3M", step="month", stepmode="backward"),
                         dict(count=6, label="6M", step="month", stepmode="backward"),
