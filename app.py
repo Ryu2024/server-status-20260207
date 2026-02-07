@@ -3,214 +3,145 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from scipy.stats import linregress
-from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# --- 1. 页面配置 ---
-st.set_page_config(page_title="Data Dashboard", layout="wide")
+# --- 1. 页面配置与基础样式 ---
+st.set_page_config(page_title="Pro Quant Monitor", layout="wide")
 
-# --- 2. 样式设置 (保留你的 Retro 风格) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #ffffff; font-family: 'Times New Roman', serif; color: #000; }
-    div[data-testid="block-container"] { max-width: 1200px; padding-top: 2rem; padding-bottom: 2rem; margin: 0 auto; }
-    /* 隐藏 Streamlit 默认的图表工具栏，让界面更像原生 App */
+    .stApp { background-color: #ffffff; }
+    div[data-testid="block-container"] { max-width: 1250px; padding: 1.5rem 2rem; margin: 0 auto; }
     .modebar { display: none !important; }
-    h1, div { font-family: 'Times New Roman', serif !important; color: #000 !important; }
+    /* 强制隐藏 Streamlit 的默认交互元素 */
+    #MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 数据处理函数 (同时获取并计算 BTC 和 ETH) ---
+# --- 2. 高级数据引擎 ---
 @st.cache_data(ttl=3600)
-def get_all_data():
-    tickers = {"BTC-USD": "BTC", "ETH-USD": "ETH"}
-    data_store = {}
+def get_quant_data():
+    assets = {"BTC-USD": "BTC", "ETH-USD": "ETH"}
+    processed = {}
     
-    for ticker, name in tickers.items():
-        try:
-            df = yf.download(ticker, period="max", interval="1d", progress=False)
-            if df.empty: continue
-            
-            # 清洗数据
-            if isinstance(df.columns, pd.MultiIndex):
-                if'Close' in df.columns.get_level_values(0): df = df.xs('Close', axis=1, level=0, drop_level=True)
-                else: df.columns = df.columns.droplevel(1)
-            if'Close' not in df.columns:
-                if len(df.columns) == 1: df.columns = ['Close']
-                else: continue
-            
-            df = df[['Close']].copy().sort_index().dropna()
-            df = df[df['Close'] > 0]
-            
-            # 计算指标
-            df['Log_Price'] = np.log(df['Close'])
-            df['GeoMean'] = np.exp(df['Log_Price'].rolling(window=200).mean())
-            
-            genesis_date = pd.Timestamp("2009-01-03")
-            df['Days'] = (df.index - genesis_date).days
-            df = df[df['Days'] > 0]
-            
-            # 回归模型
-            if ticker == "BTC-USD":
-                slope, intercept = 5.84, -17.01 # 固定参数
-            else:
-                # 动态回归
-                valid = df.dropna()
-                x = np.log10(valid['Days'].values)
-                y = np.log10(valid['Close'].values)
-                slope, intercept, _, _, _ = linregress(x, y)
-                
-            log_days = np.log10(df['Days'])
-            df['Predicted'] = 10 ** (intercept + slope * log_days)
-            df['AHR999'] = (df['Close'] / df['GeoMean']) * (df['Close'] / df['Predicted'])
-            
-            data_store[name] = df
-        except:
-            continue
-            
-    return data_store
+    for ticker, name in assets.items():
+        df = yf.download(ticker, period="max", interval="1d", progress=False)
+        if df.empty: continue
+        
+        # 统一清洗
+        if isinstance(df.columns, pd.MultiIndex): df = df.xs('Close', axis=1, level=0)
+        df = df[['Close']].copy().dropna().sort_index()
+        df = df[df['Close'] > 0]
+        
+        # 指标计算
+        df['Log_P'] = np.log(df['Close'])
+        df['Geo'] = np.exp(df['Log_P'].rolling(200).mean())
+        df['Days'] = (df.index - pd.Timestamp("2009-01-03")).days
+        df = df[df['Days'] > 0]
+        
+        # 回归模型
+        if name == "BTC": slope, intercept = 5.84, -17.01
+        else:
+            v = df.dropna(); x = np.log10(v['Days'].values); y = np.log10(v['Close'].values)
+            slope, intercept, _, _, _ = linregress(x, y)
+        
+        df['Model'] = 10 ** (intercept + slope * np.log10(df['Days']))
+        df['DI'] = (df['Close'] / df['Geo']) * (df['Close'] / df['Model'])
+        processed[name] = df
+    return processed
 
-# --- 4. 页面标题 ---
-st.markdown("""
-<div style="text-align: center; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 10px;">
-    <h1 style="font-family: 'Courier New', Courier, monospace; text-transform: uppercase; letter-spacing: 2px; font-size: 2.2rem; margin: 0;">
-        Statistical Deviation Monitor
-    </h1>
-    <div style="font-family: 'Times New Roman'; font-size: 0.9rem; margin-top: 5px;">
-        INTERACTIVE MODE (PLOTLY ENGINE)
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# --- 5. 构建全交互图表 ---
-with st.spinner("Initializing Plotly Engine..."):
-    data = get_all_data()
-    
-    if "BTC" in data and "ETH" in data:
-        # 创建子图结构
+# --- 3. 构建专业级图表 ---
+with st.spinner("QUANT ENGINE INITIALIZING..."):
+    data = get_quant_data()
+    if data:
         fig = make_subplots(
-            rows=2, cols=1, 
-            shared_xaxes=True, 
-            vertical_spacing=0.08, 
-            row_heights=[0.7, 0.3],
-            subplot_titles=("Asset Price Model", "Deviation Index")
+            rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.05,
+            row_heights=[0.72, 0.28]
         )
 
-        # ==========================================================
-        # 1. 添加所有 Trace (先把所有线条都画上去)
-        # ==========================================================
-        
-        # --- BTC Traces (默认显示) ---
-        btc = data['BTC']
-        # Trace 0: BTC Price
-        fig.add_trace(go.Scatter(x=btc.index, y=btc['Close'], name="BTC Price", visible=True, line=dict(color="#000000", width=1.5)), row=1, col=1)
-        # Trace 1: BTC Model
-        fig.add_trace(go.Scatter(x=btc.index, y=btc['Predicted'], name="BTC Model", visible=True, line=dict(color="#800080", width=1.5, dash='dash')), row=1, col=1)
-        # Trace 2: BTC AHR999
-        fig.add_trace(go.Scatter(x=btc.index, y=btc['AHR999'], name="BTC Dev", visible=True, line=dict(color="#d35400", width=1.5)), row=2, col=1)
+        # 预定义颜色
+        colors = {'BTC': '#1e1e1e', 'ETH': '#3c3cbb', 'Model': '#a905b6', 'DI': '#e67e22'}
 
-        # --- ETH Traces (默认隐藏 visible=False) ---
-        eth = data['ETH']
-        # Trace 3: ETH Price
-        fig.add_trace(go.Scatter(x=eth.index, y=eth['Close'], name="ETH Price", visible=False, line=dict(color="#000080", width=1.5)), row=1, col=1)
-        # Trace 4: ETH Model
-        fig.add_trace(go.Scatter(x=eth.index, y=eth['Predicted'], name="ETH Model", visible=False, line=dict(color="#800080", width=1.5, dash='dash')), row=1, col=1)
-        # Trace 5: ETH AHR999
-        fig.add_trace(go.Scatter(x=eth.index, y=eth['AHR999'], name="ETH Dev", visible=False, line=dict(color="#2980b9", width=1.5)), row=2, col=1)
+        # --- Trace 注入逻辑 ---
+        for i, (name, df) in enumerate(data.items()):
+            is_visible = (name == "BTC")
+            # 价格线
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df['Close'], name=f"{name} Price",
+                visible=is_visible, line=dict(color=colors[name], width=1.8)
+            ), row=1, col=1)
+            # 模型线
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df['Model'], name=f"{name} Model",
+                visible=is_visible, line=dict(color=colors['Model'], width=1.2, dash='dot')
+            ), row=1, col=1)
+            # DI 偏离值
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df['DI'], name=f"{name} DI",
+                visible=is_visible, line=dict(color=colors['DI'], width=1.5)
+            ), row=2, col=1)
 
-        # 添加参考线 (永远显示)
-        fig.add_hline(y=0.45, line_color="green", line_dash="dash", row=2, col=1)
-        fig.add_hline(y=1.2, line_color="blue", line_dash="dot", row=2, col=1)
-        fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
+        # --- 背景带 (Rectangles) ---
+        # 为下方的 DI 图表添加背景颜色带，直观识别区间
+        fig.add_hrect(y0=0, y1=0.45, fillcolor="rgba(40, 167, 69, 0.1)", line_width=0, row=2, col=1)
+        fig.add_hrect(y0=0.45, y1=1.2, fillcolor="rgba(0, 123, 255, 0.05)", line_width=0, row=2, col=1)
+        fig.add_hrect(y0=4.0, y1=10.0, fillcolor="rgba(220, 53, 69, 0.1)", line_width=0, row=2, col=1)
 
-        # ==========================================================
-        # 2. 定义 Buttons (Update Menus)
-        # ==========================================================
-        # 逻辑：点击 BTC，设置 visible=[True, True, True, False, False, False]
-        # 逻辑：点击 ETH，设置 visible=[False, False, False, True, True, True]
-        
+        # --- 交互 UI 控件 ---
         updatemenus = [
+            # 币种切换按钮
             dict(
-                type="buttons",
-                direction="right",
-                x=0.0, y=1.16, # 按钮位置 (图表左上角上方)
-                showactive=True,
-                bgcolor="#ffffff",
-                bordercolor="#000000",
-                borderwidth=1,
-                font=dict(family="Courier New", size=12, color="#000"),
-                buttons=list([
-                    dict(
-                        label="BTC-USD",
-                        method="update",
-                        args=[{"visible": [True, True, True, False, False, False]}, # 控制 Trace 可见性
-                              {"title": "Bitcoin Logarithmic Regression"}]          # 同时更新标题
-                    ),
-                    dict(
-                        label="ETH-USD",
-                        method="update",
-                        args=[{"visible": [False, False, False, True, True, True]},
-                              {"title": "Ethereum Logarithmic Regression"}]
-                    ),
-                ]),
+                type="buttons", direction="right", x=0, y=1.12,
+                showactive=True, active=0,
+                bgcolor="white", bordercolor="#444", borderwidth=1,
+                font=dict(size=12, family="Arial", color="#000"),
+                buttons=[
+                    dict(label="   BITCOIN   ", method="update", args=[{"visible": [True, True, True, False, False, False]}]),
+                    dict(label="   ETHEREUM   ", method="update", args=[{"visible": [False, False, False, True, True, True]}])
+                ]
             )
         ]
 
-        # ==========================================================
-        # 3. 布局设置 (包含 Range Slider)
-        # ==========================================================
+        # --- 全局布局调整 ---
         fig.update_layout(
-            height=850,
+            height=900,
             template="plotly_white",
             updatemenus=updatemenus,
-            title_text="Bitcoin Logarithmic Regression", # 默认标题
-            title_x=0.5,
-            title_y=0.98,
-            title_font=dict(family="Times New Roman", size=20),
-            font=dict(family="Times New Roman", size=14, color="#000"),
-            margin=dict(l=40, r=40, t=100, b=80), # 给按钮留出顶部空间
-            
-            # --- 核心：原生时间选择器 ---
+            margin=dict(l=50, r=20, t=130, b=50),
+            hovermode="x unified",
+            # 图表标题与辅助信息
+            annotations=[
+                dict(text="STATISTICAL DEVIATION MONITOR", font_size=24, xref="paper", yref="paper", x=0.5, y=1.18, showarrow=False, font_family="Courier New", font_color="black"),
+                dict(text="L: Value Zone | M: Accumulation | H: Distribution", font_size=11, xref="paper", yref="paper", x=1, y=1.06, showarrow=False)
+            ],
+            legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center"),
+            # 时间选择器
             xaxis=dict(
                 rangeselector=dict(
                     buttons=list([
                         dict(count=1, label="1Y", step="year", stepmode="backward"),
                         dict(count=3, label="3Y", step="year", stepmode="backward"),
-                        dict(count=5, label="5Y", step="year", stepmode="backward"),
                         dict(step="all", label="MAX")
                     ]),
-                    bgcolor="#f0f0f0",
-                    bordercolor="#000",
-                    borderwidth=1,
-                    font=dict(family="Courier New", size=11)
+                    y=1.02, x=0, bgcolor="rgba(255,255,255,0.8)"
                 ),
-                rangeslider=dict(
-                    visible=True, # 开启底部滑块
-                    thickness=0.08,
-                    bgcolor="#f9f9f9",
-                    bordercolor="#ccc"
-                ),
-                type="date"
-            ),
-            
-            legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center")
+                rangeslider=dict(visible=True, thickness=0.06),
+                type="date",
+                gridcolor="#f0f0f0"
+            )
         )
 
-        fig.update_yaxes(type="log", row=1, col=1, gridcolor='#eee', zeroline=False)
-        fig.update_yaxes(gridcolor='#eee', zeroline=False, row=2, col=1)
-        fig.update_xaxes(gridcolor='#eee', showgrid=True)
+        fig.update_yaxes(type="log", gridcolor="#f0f0f0", row=1, col=1, title="Price (USD)")
+        fig.update_yaxes(gridcolor="#f0f0f0", row=2, col=1, title="DI Index", range=[0, 6])
 
-        # 渲染图表
+        # --- 渲染 ---
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-        
-        # 底部状态栏 (静态)
-        st.markdown(f"""
-        <div style="background-color: #f0f0f0; padding: 10px; border-top: 2px solid #000; font-size: 0.9em; display: flex; justify-content: space-between;">
-            <span><b>SYSTEM:</b> Plotly Native Mode</span>
-            <span><b>NOTE:</b> Use chart buttons to switch assets. Use bottom slider to zoom.</span>
+
+        # 自定义状态页脚
+        st.markdown("""
+        <div style="border-top: 1px solid #000; padding: 10px; font-size: 0.8rem; font-family: 'Courier New'; display: flex; justify-content: space-between; opacity: 0.6;">
+            <span>QUANT_SYSTEM_V2 // NO_REFRESH_ACTIVE</span>
+            <span>ENGINE: PLOTLY_JS_6.4</span>
         </div>
         """, unsafe_allow_html=True)
-
-    else:
-        st.error("Failed to load market data.")
