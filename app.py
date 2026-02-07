@@ -10,7 +10,7 @@ from plotly.subplots import make_subplots
 # --- 1. 页面配置 ---
 st.set_page_config(page_title="Data Dashboard", layout="wide")
 
-# --- 2. 样式设置 ---
+# --- 2. 样式设置
 st.markdown("""
 <style>
     /* ============================================================ */
@@ -30,40 +30,33 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. [终极方案] 伪元素覆盖法 (Pseudo-element Overlay) */
+    /* 2. [核心修复] 强制覆盖 st.container(border=True) 样式 */
     /* ============================================================ */
-    /* 策略：
-       1. 将原生容器的边框设为透明 (transparent)，但保留 1px 宽度以维持布局位置。
-       2. 使用 ::after 伪元素生成一个绝对定位的黑框覆盖在上面。
-       3. 伪元素不受父级 border-radius 影响，保证绝对直角。
-    */
     
+    /* 目标：选中所有带边框的 Streamlit 容器 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        /* 隐藏原生边框颜色，但保留宽度占位 */
-        border: 1px solid transparent !important;
-        border-radius: 0px !important;
-        /* 关键：设置为相对定位，作为伪元素的定位基准 */
-        position: relative !important;
-        box-shadow: none !important;
-        background-color: #ffffff;
-    }
-    
-    /* 创建一个新的直角黑框 */
-    div[data-testid="stVerticalBlockBorderWrapper"]::after {
-        content: "" !important;
-        position: absolute !important;
-        /* 覆盖在透明边框之上 (-1px 表示向外延伸覆盖住原本的 border 位置) */
-        top: -1px !important;
-        left: -1px !important;
-        right: -1px !important;
-        bottom: -1px !important;
-        /* 强制直角黑边 */
+        /* 1. 强制变成黑色实线边框 */
         border: 1px solid #000000 !important;
+        
+        /* 2. 核心：强制圆角为 0 */
         border-radius: 0px !important;
-        /* 关键：让鼠标点击穿透这个层，否则里面的按钮点不动 */
-        pointer-events: none !important;
-        /* 确保显示在最上层 */
-        z-index: 10 !important;
+        
+        /* 3. 移除可能的阴影 */
+        box-shadow: none !important;
+        
+        /* 4. 确保背景纯白 */
+        background-color: #ffffff !important;
+        
+        /* 5. 调整内边距，配合我们的负边距标题 */
+        padding: 0px !important;
+        
+        /* 6. 防止内部元素裁剪导致看起来有圆角 */
+        overflow: visible !important;
+    }
+
+    /* 暴力消除容器内任何可能残留的圆角 */
+    div[data-testid="stVerticalBlockBorderWrapper"] > * {
+        border-radius: 0px !important;
     }
 
     /* ============================================================ */
@@ -74,7 +67,6 @@ st.markdown("""
         background-color: #ffffff;
         padding: 0px; 
         margin-bottom: 20px;
-        position: relative;
     }
 
     .retro-custom-header {
@@ -91,7 +83,7 @@ st.markdown("""
     }
     
     .retro-custom-content {
-        padding: 15px 15px 20px 15px;
+        padding: 15px 15px 20px 15px; /* 底部加 padding 让文字不贴边 */
     }
 
     /* ============================================================ */
@@ -102,17 +94,33 @@ st.markdown("""
         color: #000000 !important;
         font-weight: bold;
         text-transform: uppercase;
-        margin-top: -16px !important;
-        margin-left: -16px !important;
-        margin-right: -16px !important;
+        
+        /* 关键：因为我们在容器 CSS 里设了 padding: 0，这里不需要很夸张的负边距了 */
+        /* 只需要微调确保贴边即可 */
+        margin-top: 0px !important; 
+        margin-left: 0px !important;
+        margin-right: 0px !important;
         margin-bottom: 15px !important;
-        width: calc(100% + 32px) !important;
+        
+        width: 100% !important;
         padding: 8px 0px;
         border-bottom: 1px solid #000000;
         font-size: 1rem;
         letter-spacing: 0.05em;
         text-align: center;
         line-height: 1.2;
+    }
+    
+    /* 对 Time Range 下方的列布局稍微加点内边距 */
+    div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="column"] {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    /* Selectbox 和 Button 的容器稍微加点内边距 */
+    div[data-testid="stVerticalBlockBorderWrapper"] .stElementContainer {
+        padding-left: 10px;
+        padding-right: 10px;
     }
 
     /* ============================================================ */
@@ -177,7 +185,12 @@ st.markdown("""
     /* ============================================================ */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    .stButton { margin-top: 0px !important; }
+    
+    /* 按钮容器下边距 */
+    .stButton { 
+        padding-bottom: 15px !important; /* 增加底部空间，防止贴底 */
+    }
+    
     .stButton>button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
@@ -214,30 +227,29 @@ def get_data_and_calc(ticker):
             return pd.DataFrame(), "Error: No data returned from Yahoo Finance."
 
         if isinstance(df.columns, pd.MultiIndex):
-            if'Close' in df.columns.get_level_values(0):
-                 df = df.xs('Close', axis=1, level=0, drop_level=True)
+            if '', axis=1, level=0, drop_level=True)
             else:
                  df.columns = df.columns.droplevel(1)
         
         if'Close' not in df.columns:
             if len(df.columns) == 1:
-                df.columns = ['Close']
-            else:
-                close_cols = [c for c in df.columns if'Close' in str(c)]
+                df.columns = ['Close']            else:
+                close_cols = [c for c in df.columns if'Close' in str(
+c)]
                 if close_cols:
-                    df = df[[close_cols[0]]].copy()
-                    df.columns = ['Close']
+                    df = df[[close_cols[0]]].copy()                    df.columns = ['Close']
         
         if'Close' not in df.columns:
-             return pd.DataFrame(), f"Error: Could not find Close price. Columns: {df.columns.tolist()}"
+             return pd.DataFrame(), f"Error: Could not find Close price. Columns: {df.columns.tolist
+()}"
              
         df = df[['Close']].copy().sort_index()
         
         if df.index.tz is not None:
-            df.index = df.index.tz_localize(None)
-        
+            df.index = df.index.tz_localize(None)        
         df = df[~df.index.duplicated(keep='last')]
-        df = df.dropna()
+        df = df
+.dropna()
         df = df[df['Close'] > 0]
         
         df['Log_Price'] = np.log(df['Close'])
@@ -245,11 +257,11 @@ def get_data_and_calc(ticker):
         
         genesis_date = pd.Timestamp("2009-01-03")
         df['Days'] = (df.index - genesis_date).days
-        df = df[df['Days'] > 0]
-        
+        df = df[df['Days'] > 0]        
         if ticker == "BTC-USD":
             slope = 5.84
-            intercept = -17.01
+            intercept = -
+17.01
             log_days = np.log10(df['Days'])
             df['Predicted'] = 10 ** (slope * log_days + intercept)
             note = "Method: Power Law (Fixed)"
@@ -262,43 +274,44 @@ def get_data_and_calc(ticker):
                 df['Predicted'] = 10 ** (intercept + slope * np.log10(df['Days']))
                 note = f"Method: Dynamic Reg (Beta {slope:.4f})"
             else:
-                df['Predicted'] = np.nan
-                note = "Insufficient Data"
+                df['Predicted'] = np.nan                note = "Insufficient Data"
 
-        df['AHR999'] = (df['Close'] / df['GeoMean']) * (df['Close'] / df['Predicted'])
-        return df, note
-    except Exception as e:
+        df['AHR999'] = (df['Close']
+ / df['GeoMean']) * (df['Close'] / df['Predicted'])
+        return df, note    except Exception as e:
         return pd.DataFrame(), f"System Error: {str(e)}"
 
 # --- 4. 页面布局 ---
 
 st.title("Statistical Deviation Monitor")
-st.markdown("---")
+st.markdown("---
+")
 
 col_l, col_r = st.columns([1, 2], gap="large")
-
-# 左侧：配置 (Native st.container with CSS hack)
-with col_l:
+# 左侧：配置
+# 使用 border=True，并通过上方的 CSS 强制修正为直角黑框
+with col
+_l:
     with st.container(border=True):
         st.markdown('<div class="retro-header-native">CONFIGURATION</div>', unsafe_allow_html=True)
         
         ticker = st.selectbox(
             "Target Asset", 
-            options=["BTC-USD", "ETH-USD"],
-            index=0
+            options=["BTC-USD", "ETH-USD"],            index=0
         )
         
-        if st.button("RELOAD DATASET", use_container_width=True):
+        if st.button("RELOAD DATASET", use_container_width=True
+):
             st.cache_data.clear()
             st.rerun()
 
-# 右侧：指南 (HTML Render)
+# 右侧：指南 (纯 HTML 渲染，完美控制)
 with col_r:
     st.markdown("""
     <div class="retro-custom-box">
-        <div class="retro-custom-header">REFERENCE GUIDE</div>
-        <div class="retro-custom-content">
-            <div style="margin-bottom: 10px; display: flex; align-items: center;">
+        <div class="retro-custom-header">REFERENCE GUIDE</div>        <div class="retro-custom-content">
+            <div style="margin-bottom: 1
+0px; display: flex; align-items: center;">
                 <span style="display:inline-block; width:12px; height:12px; background-color:#28a745; border:1px solid black; margin-right:10px;"></span>
                 <span><b>L-Line (0.45):</b> Lower statistical bound. Historical buy zone.</span>
             </div>
@@ -310,12 +323,12 @@ with col_r:
                 <span style="display:inline-block; width:12px; height:12px; background-color:#dc3545; border:1px solid black; margin-right:10px;"></span>
                 <span><b>H-Line (4.00):</b> Upper statistical bound. Variance warning.</span>
             </div>
-        </div>
-    </div>
+        </div>    </div>
     """, unsafe_allow_html=True)
 
 # 时间选择器
-min_date = datetime(2009, 1, 3).date()
+min_date =
+ datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
 one_year_ago = max_date - timedelta(days=365)
 default_start = one_year_ago
@@ -325,26 +338,32 @@ slider_key = f"slider_{ticker}"
 if slider_key not in st.session_state:
     st.session_state[slider_key] = (default_start, default_end)
 
-with st.container(border=True):
-    st.markdown('<div class="retro-header-native">TIME RANGE SLICER</div>', unsafe_allow_html=True)
+with st.container(border=True):    st.markdown('<div class="retro-header-native">TIME RANGE SLICER</div>', unsafe_allow
+_html=True)
     
     c_start, c_end = st.columns([1, 1])
     current_val = st.session_state[slider_key]
     
     with c_start:
-        st.markdown(f"<div style='padding-left:0px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
-    with c_end:
-        st.markdown(f"<div style='text-align: right; padding-right:0px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='padding-left:10px;'><b>{current_val[0].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)    with c_end:
+        st.markdown(f"<div style='text-align: right; padding-
+right:10px;'><b>{current_val[1].strftime('%Y/%m/%d')}</b></div>", unsafe_allow_html=True)
     
-    start_date, end_date = st.slider(
+    # 稍微调整滑块容器的 padding
+    st.markdown("<div style='padding: 0px 10px;'>", unsafe_allow_html=True)    start_date, end_date = st.slider(
         "Time Range",
-        min_value=min_date,
+        min_value=
+min_date,
         max_value=max_date,
         value=st.session_state[slider_key],
         format="YYYY/MM/DD",
-        label_visibility="collapsed",
-        key=slider_key
+        label_visibility="collapsed",        key=slider_key
     )
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # 底部稍微留空，防止滑块贴底
+    st.markdown("<div style='
+height: 10px'></div>", unsafe_allow_html=True)
 
 # --- 5. 核心分析展示 ---
 
@@ -360,10 +379,10 @@ with st.spinner("Processing data..."):
         if len(df_display) > 0:
             last = df_full.iloc[-1]
             ahr = last['AHR999'] if'AHR999' in last else 0
-            price = last['Close']
-            
+            price = last['Close']            
             if ahr < 0.45:
-                state = "ZONE L (Undershoot)"
+                state = "ZONE L (Undershoot
+)"
                 color = "#28a745"
             elif 0.45 <= ahr <= 1.2:
                 state = "ZONE M (Accumulation)"
@@ -377,11 +396,11 @@ with st.spinner("Processing data..."):
 
             st.markdown(f"""
             <div class="metric-container">
-                <div class="metric-item">
-                    <div style="font-size:0.9em; color:#666;">CURRENT VALUE</div>
+                <div class="metric-item">                    <div style="font-size:0.9em; color:#666;">CURRENT VALUE</div>
                     <div class="metric-value">${price:,.2f}</div>
                 </div>
-                <div class="metric-item">
+                <div class
+="metric-item">
                     <div style="font-size:0.9em; color:#666;">DEVIATION INDEX</div>
                     <div class="metric-value" style="color: {color}">{ahr:.4f}</div>
                 </div>
@@ -389,11 +408,11 @@ with st.spinner("Processing data..."):
                     <div style="font-size:0.9em; color:#666;">STATUS</div>
                     <div class="metric-value" style="color: {color}">{state}</div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+            </div>            """, unsafe_allow_html=True)
 
             fig = make_subplots(
-                rows=2, cols=1, 
+                rows=2, cols
+=1, 
                 shared_xaxes=True, 
                 vertical_spacing=0.1, 
                 row_heights=[0.6, 0.4],
@@ -406,8 +425,8 @@ with st.spinner("Processing data..."):
             fig.add_trace(go.Scatter(x=df_display.index, y=df_display['AHR999'], name="DI Value", line=dict(color="#d35400", width=1.5)), row=2, col=1)
 
             fig.add_hline(y=0.45, line_color="green", line_dash="dash", row=2, col=1)
-            fig.add_hline(y=1.2, line_color="blue", line_dash="dot", row=2, col=1)
-            fig.add_hline(y=4.0, line_color="red", line_dash="dash", row=2, col=1)
+            fig.add_hline(y=1.2, line_color="blue", line_dash="dot", row=2, col=1)            fig.add_hline(y=4.0, line_color="red", line_dash="dash
+", row=2, col=1)
 
             fig.update_layout(
                 height=700,
@@ -427,8 +446,8 @@ with st.spinner("Processing data..."):
                 )
             )
             
-            fig.update_xaxes(
-                showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True,
+            fig.update_xaxes(                showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True
+,
                 rangeslider=dict(visible=False) 
             )
             fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#eee', linecolor='black', mirror=True, type="log")
@@ -436,12 +455,12 @@ with st.spinner("Processing data..."):
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
             
             st.markdown(f"""
-            <div style="background-color: #f0f0f0; padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">
-                <b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} | <b>MODE:</b> {note}
+            <div style="background-color: #f0f0f0; padding: 8px; border: 1px solid #000; margin-top: 15px; font-size: 0.9em;">                <b>SYSTEM STATUS:</b> Ready | <b>DATA POINTS:</b> {len(df_display)} |
+ <b>MODE:</b> {note}
             </div>
-            """, unsafe_allow_html=True)
-            
+            """, unsafe_allow_html=True)            
         else:
              st.warning("No data in selected range.")
     else:
-        st.error(f"Unable to fetch data. Error details: {note}")
+        st.error
+(f"Unable to fetch data. Error details: {note}")
