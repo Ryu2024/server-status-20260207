@@ -18,7 +18,7 @@ if'ticker' not in st.session_state:
 st.markdown("""
 <style>
     /* ============================================================ */
-    /* 1. 全局基础与容器限制 (核心修改) */
+    /* 1. 全局基础与布局优化 */
     /* ============================================================ */
     .stApp {
         background-color: #ffffff;
@@ -26,12 +26,20 @@ st.markdown("""
         color: #000000;
     }
     
-    /* [核心修改]：限制页面主容器的最大宽度，使其在宽屏下不至于拉得太长 */
+    /* 限制页面主容器的最大宽度，保持紧凑 */
     div[data-testid="block-container"] {
-        max-width: 1200px;   /* 限制最大宽度为 1200px，你可以根据需要改为 1000px 或 1400px */
-        padding-top: 2rem;   /* 顶部留白 */
+        max-width: 1200px;
+        padding-top: 2rem;
         padding-bottom: 2rem;
-        margin: 0 auto;      /* 居中显示 */
+        margin: 0 auto;
+    }
+
+    /* [核心修改]：图表容器强制拉宽 */
+    /* 宽度设为 106% 并向左偏移 3%，让图表比上面的文字栏更宽，视觉上对齐边框 */
+    div[data-testid="stPlotlyChart"] {
+        width: 106% !important;
+        margin-left: -3% !important;
+        max-width: 106% !important;
     }
 
     h1, h2, h3, label, p, div, span, li {
@@ -41,7 +49,7 @@ st.markdown("""
     .modebar { display: none !important; }
 
     /* ============================================================ */
-    /* 2. 颜色定义 (覆盖全局黑色) */
+    /* 2. 颜色定义 */
     /* ============================================================ */
     .retro-color-green, .retro-color-green * { color: #28a745 !important; }
     .retro-color-blue, .retro-color-blue * { color: #007bff !important; }
@@ -75,20 +83,13 @@ st.markdown("""
     .stButton > button {
         border-radius: 0px !important;
         border: 1px solid #000 !important;
-        background-color: #ffffff !important; /* 默认白底 */
+        background-color: #ffffff !important;
         color: #000 !important;
         font-weight: bold !important;
         box-shadow: 1px 1px 0px #888 !important;
-        
-        /* 强制高度 32px */
         height: 32px !important;
         min-height: 32px !important;
         padding: 0px !important;
-        
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        
         font-size: 0.85rem !important;
         letter-spacing: 0.05em;
         font-family: 'Courier New', Courier, monospace !important;
@@ -100,51 +101,26 @@ st.markdown("""
         color: #000 !important;
     }
     
-    .stButton > button:active {
-        box-shadow: none !important;
-        transform: translate(1px, 1px);
-    }
-
     /* ============================================================ */
     /* 5. 辅助样式 */
     /* ============================================================ */
-    /* 去掉 Slider 刻度 */
     div[data-testid="stSliderTickBar"], div[data-testid="stSlider"] div[data-testid="stMarkdownContainer"] p { display: none !important; }
     .stSlider > div > div > div > div { height: 6px !important; background-color: #c0c0c0 !important; border: 1px solid #808080 !important; border-radius: 0px !important; }
     [data-testid="stSliderThumb"] { height: 18px !important; width: 18px !important; border-radius: 0px !important; background-color: #000000 !important; border: 1px solid #ffffff !important; top: -6px !important; }
     
-    /* 指标卡片 */
     .metric-container { display: flex; justify-content: space-between; background-color: #f9f9f9; padding: 15px; border: 1px solid #000000; margin-bottom: 20px; }
     .metric-item { text-align: center; width: 33%; border-right: 1px solid #ccc; }
     .metric-item:last-child { border-right: none; }
     .metric-value { font-size: 1.6em; font-weight: bold; }
-    
-    /* 图例文字 */
     .legend-text { font-size: 0.85rem !important; margin-right: 15px !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 4. 动态 CSS 注入 (用于按钮高亮) ---
 if st.session_state.ticker == "BTC-USD":
-    st.markdown("""
-    <style>
-        div[data-testid="column"]:nth-of-type(1) div.stButton > button {
-            background-color: #000000 !important;
-            color: #ffffff !important;
-            box-shadow: none !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown("""<style>div[data-testid="column"]:nth-of-type(1) div.stButton > button { background-color: #000000 !important; color: #ffffff !important; box-shadow: none !important; }</style>""", unsafe_allow_html=True)
 elif st.session_state.ticker == "ETH-USD":
-    st.markdown("""
-    <style>
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            background-color: #000000 !important;
-            color: #ffffff !important;
-            box-shadow: none !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown("""<style>div[data-testid="column"]:nth-of-type(2) div.stButton > button { background-color: #000000 !important; color: #ffffff !important; box-shadow: none !important; }</style>""", unsafe_allow_html=True)
 
 
 # --- 5. 数据逻辑 ---
@@ -191,7 +167,6 @@ def get_data_and_calc(ticker):
 
 # --- 6. 页面布局 ---
 
-# 标题区域
 st.markdown("""
 <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
     <h1 style="font-family: 'Courier New', Courier, monospace; text-transform: uppercase; letter-spacing: 2px; font-size: 2.2rem; margin: 0;">
@@ -203,26 +178,14 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 工具栏 (Buttons + Legend)
 with st.container(border=True):
-    # 这里不需要调整比例，因为 CSS 已经限制了总宽度，它们会自动变得紧凑
     c_btc, c_eth, c_reload, c_spacer, c_legend = st.columns([0.8, 0.8, 1, 0.5, 4.5])
-    
     with c_btc:
-        if st.button("BTC", use_container_width=True):
-            st.session_state.ticker = "BTC-USD"
-            st.rerun()
-            
+        if st.button("BTC", use_container_width=True): st.session_state.ticker = "BTC-USD"; st.rerun()
     with c_eth:
-        if st.button("ETH", use_container_width=True):
-            st.session_state.ticker = "ETH-USD"
-            st.rerun()
-            
+        if st.button("ETH", use_container_width=True): st.session_state.ticker = "ETH-USD"; st.rerun()
     with c_reload:
-        if st.button("RELOAD", use_container_width=True):
-            st.cache_data.clear()
-            st.rerun()
-            
+        if st.button("RELOAD", use_container_width=True): st.cache_data.clear(); st.rerun()
     with c_legend:
         st.markdown("""
         <div style="display: flex; align-items: center; justify-content: flex-end; height: 32px;">
@@ -241,12 +204,10 @@ with st.container(border=True):
         </div>
         """, unsafe_allow_html=True)
 
-# 时间选择器
 min_date = datetime(2009, 1, 3).date()
 max_date = datetime.today().date()
 slider_key = f"slider_{st.session_state.ticker}"
-if slider_key not in st.session_state:
-    st.session_state[slider_key] = (max_date - timedelta(days=365), max_date)
+if slider_key not in st.session_state: st.session_state[slider_key] = (max_date - timedelta(days=365), max_date)
 
 st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
 
@@ -300,7 +261,10 @@ with st.spinner("Processing data..."):
                 height=900,  
                 template="plotly_white",
                 font=dict(family="Times New Roman", size=14, color="#000"),
-                margin=dict(l=60, r=40, t=140, b=100),
+                
+                # [核心修改]：减小左右 Margin (原 l=60, r=40)，让图表内容更宽
+                margin=dict(l=20, r=20, t=140, b=100),
+                
                 plot_bgcolor="white",
                 paper_bgcolor="white",
                 legend=dict(
